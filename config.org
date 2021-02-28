@@ -1,9 +1,25 @@
 #+TITLE: Emacs Config
 #+PROPERTY: header-args :tangle ~/.emacs.d/init.el
 
-This org document contains my emacs configuration. In order to write to the actual =init.el= execute the following line:
+This org document contains my emacs configuration. In order to write to the actual =init.el= execute the following line with =C-x C-e=
 
 (org-babel-tangle)
+
+* Notes
+** Hooks
+
+Adding a hook to a node means consists in telling emacs to call a function whenever you enter the given mode. For example:
+
+=(add-hook 'text-mode-hook (lambda () (column-number-mode 1)))=
+
+executes the provided lambda (which toggles column number in modeline) whenever we enter text-mode. Likewise you an remove hooks with =remove-hook=:
+
+=(remove-hook 'text-mode-hook (lambda () (column-number-mode 1)))=
+
+Likewise you can simply set the hook to =nil= to clear all hooks:
+
+=(setq org-mode-hook nil)=
+
 
 * Package initialization
   
@@ -28,7 +44,7 @@ Setting up package sources as well as =use-package=.
 (setq use-package-always-ensure t)
 #+END_SRC
 
-* Basic editor settings
+* Editor settings
 ** Basic UI changes
 
 Remove GUI elements and remove startup screen.
@@ -50,12 +66,20 @@ Show text prompts instead of dialog popups
 (defalias 'yes-or-no-p 'y-or-n-p)
 #+END_SRC
 
+Disable blinking cursor
+
+#+BEGIN_SRC emacs-lisp
+(blink-cursor-mode 0)
+#+END_SRC
+
+#+RESULTS:
+
 ** Font configuration
 
 I am using Hack Nerd font for monospaced and standard sans serif for sans.
 
 #+BEGIN_SRC emacs-lisp
-(defvar rom/default-font-size 100)
+(defvar rom/default-font-size 110)
 (defvar rom/default-variable-font-size 120)
 
 (set-face-attribute 'default nil :font "Hack Nerd Font" :height rom/default-font-size)
@@ -121,21 +145,12 @@ Increase undo limits
 ** Scrolling
 
 #+BEGIN_SRC emacs-lisp
-(setq scroll-margin 2)
-(setq scroll-conservatively scroll-margin) 
-(setq scroll-step 1)
-(setq mouse-wheel-scroll-amount '(6 ((shift) . 1)))
-(setq mouse-wheel-progressive-speed nil)
-(setq mouse-wheel-inhibit-click-time nil)
-(setq scroll-preserve-screen-position t)
-(setq scroll-error-top-bottom t)
-(setq next-error-recenter (quote (4)))
-(setq fast-but-imprecise-scrolling nil)
-(setq jit-lock-defer-time 0)
+(use-package smooth-scroll)
+(smooth-scrolling-mode 1)
 #+END_SRC
 
 #+RESULTS:
-: 0
+: t
 
 ** Indentation
 
@@ -150,9 +165,21 @@ Increase undo limits
 (setq-default evil-shift-round nil)
 #+END_SRC
 
+** UTF-8
+
+Always use UTF-8
+
+#+BEGIN_SRC emacs-lisp
+(prefer-coding-system 'utf-8) 
+(set-default-coding-systems 'utf-8) 
+(set-terminal-coding-system 'utf-8) 
+(set-keyboard-coding-system 'utf-8) 
+(setq default-buffer-fle-coding-system 'utf-8) 
+#+END_SRC
+
 ** Line numbers
 
-Enable line numbers globally
+Enable line numbers by default
 
 #+BEGIN_SRC emacs-lisp
 (global-display-line-numbers-mode 1)
@@ -167,34 +194,75 @@ Disable line numbers on certain modes
 (dolist (mode '(org-mode-hook
                 term-mode-hook
                 shell-mode-hook
-                eshell-mode-hook))
+                eshell-mode-hook
+                dired-mode-hook
+                ielm-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 #+END_SRC
 
 #+RESULTS:
 
-** UTF-8
-
-ilways use UTF-8
-
-#+BEGIN_SRC emacs-lisp
-(prefer-coding-system 'utf-8) 
-(set-default-coding-systems 'utf-8) 
-(set-terminal-coding-system 'utf-8) 
-(set-keyboard-coding-system 'utf-8) 
-(setq default-buffer-fle-coding-system 'utf-8) 
-#+END_SRC
-
 ** Word wrapping
 
-Disable word wrapping by default but enable it for certain modes
+Disable word wrapping by default
 
 #+BEGIN_SRC emacs-lisp
 (setq-default truncate-lines t)
 #+END_SRC
 
 #+RESULTS:
-| (lambda nil (visual-line-mode)) | #[0 \301\211\207 [imenu-create-index-function org-imenu-get-tree] 2] | efs/org-mode-visual-fill | org-bullets-mode | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-show-all append local] 5] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-babel-show-result-all append local] 5] | org-babel-result-hide-spec | org-babel-hide-all-hashes | (lambda nil (display-line-numbers-mode 0)) |
+: t
+
+** Code folding
+
+Origami is used to implement code folding
+
+#+BEGIN_SRC emacs-lisp
+(use-package origami)
+(global-origami-mode)
+#+END_SRC
+
+#+RESULTS:
+: t
+
+** Parentheses
+
+*** Auto matching
+
+The autopair package is used for auto-matching
+
+#+BEGIN_SRC emacs-lisp
+(use-package autopair)
+(autopair-global-mode)
+#+END_SRC
+
+#+RESULTS:
+: t
+
+*** Rainbow parens
+
+Rainbow delimiters are used for clarity and matching parnes are highlighted.
+
+#+BEGIN_SRC emacs-lisp
+(use-package rainbow-delimiters
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+(show-paren-mode 1)
+(setq blink-matching-paren nil)
+(setq show-paren-delay 0.2)
+(setq show-paren-highlight-openparen t)
+(setq show-paren-when-point-inside-paren t)
+#+END_SRC
+
+** Concealing
+  Display "lambda" as λ
+
+#+BEGIN_SRC emacs-lisp
+(global-prettify-symbols-mode 1)
+#+END_SRC
+
+#+RESULTS:
+: t
 
 * Aesthetics
 
@@ -232,20 +300,9 @@ The modeline being used is Doom Modeline, taken from doom emacs.
   (doom-modeline-gnus-timer nil))
 #+END_SRC
 
-Parenthesis options. Rainbow delimiters are used for clarity and matching parnes are highlighted.
+dome-modeline-height
 
-#+BEGIN_SRC emacs-lisp
-(use-package rainbow-delimiters
-  :hook (prog-mode . rainbow-delimiters-mode))
-
-(show-paren-mode 1)
-(setq blink-matching-paren nil)
-(setq show-paren-delay 0.2)
-(setq show-paren-highlight-openparen t)
-(setq show-paren-when-point-inside-paren t)
-#+END_SRC
-
-* IVY
+* IVY and Counsel
 
 Use IVY to autocomplete buffers, file search, etc.
 
@@ -268,7 +325,6 @@ Use IVY to autocomplete buffers, file search, etc.
   :config
   (ivy-mode 1))
 
-(use-package ivy)
 #+END_SRC
 
 #+RESULTS:
@@ -296,73 +352,41 @@ Counsel provides replacements to some command such as =find-file= and =switch-bu
 #+RESULTS:
 : t
 
-* Helpful
-
-Helpful improves the emacs help system.
-
-#+BEGIN_SRC emacs-lisp
-(use-package helpful
-  :custom
-  (counsel-describe-function-function #'helpful-callable)
-  (counsel-describe-variable-function #'helpful-variable)
-  :bind
-  ([remap describe-function] . counsel-describe-function)
-  ([remap describe-command] . helpful-command)
-  ([remap describe-variable] . counsel-describe-variable)
-  ([remap describe-key] . helpful-key))
-#+END_SRC 
-
-#+RESULTS:
-: helpful-key
-
-* Evil mode
-  
-Vim emulation
+* Evil Mode
+   
+Main vim-emulation plugin
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil
-  :demand t
   :init
-
-  ;; See `undo-fu' package.
-  (setq evil-undo-system 'undo-fu)
-
+  (setq evil-want-integration t)
+  (setq evil-want-keybinding nil)
+  (setq evil-want-C-u-scroll t)
+  (setq evil-want-C-i-jump nil)
   :config
-  (evil-mode)
+  (evil-mode 1)
+  (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+  (define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
 
-  ;; use evil search
-  (setq evil-search-module 'evil-search)
-  (setq evil-ex-search-case 'sensitive))
+  ;; Use visual line motions even outside of visual-line-mode buffers
+  (evil-global-set-key 'motion "j" 'evil-next-visual-line)
+  (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+
+  (evil-set-initial-state 'messages-buffer-mode 'normal)
+  (evil-set-initial-state 'dashboard-mode 'normal))
+#+END_SRC
+
+evil collection enhances evil mode
+
+#+BEGIN_SRC emacs-lisp
+(use-package evil-collection
+  :after evil
+  :config
+  (evil-collection-init))
 #+END_SRC
 
 #+RESULTS:
 : t
-
-Use vim-like undo
-
-#+BEGIN_SRC emacs-lisp
-(use-package undo-fu)
-#+END_SRC
-
-#+RESULTS:
-
-Emulate vims =C-a= and =C-x= for incrementing and decrementing numbers.
-
-#+BEGIN_SRC emacs-lisp
-;; increment and decrement numbers
-; (use-package evil-numbers)
-; (define-key evil-normal-state-map (kbd "C-a") 'evil-numbers/inc-at-pt)
-; (define-key evil-normal-state-map (kbd "C-x") 'evil-numbers/dec-at-pt)
-#+END_SRC
-
-Emulate vim surround
-
-#+BEGIN_SRC emacs-lisp
-(use-package evil-surround
-  :demand t
-  :config
-  (global-evil-surround-mode 1))
-#+END_SRC
 
 Map insert mode =jj= to =Esc=
 
@@ -377,26 +401,24 @@ Map insert mode =jj= to =Esc=
 #+RESULTS:
 : t
 
-
-Use =Spc= as a leader key.
-
-#+BEGIN_SRC emacs-lisp
-(with-eval-after-load 'evil
-  (evil-set-leader '(normal) (kbd "<SPC>"))
-  (evil-define-key 'normal 'global (kbd "<leader>k") 'find-file-in-project)
-  (evil-define-key 'normal 'global (kbd "<leader>f") 'counsel-git-grep)
-  (evil-define-key 'normal 'global (kbd "<leader>s") 'swiper)
-  (evil-define-key 'normal 'global (kbd "<leader>b") 'counsel-switch-buffer))
-#+END_SRC
-
-#+RESULTS:
-
 * ORG
 
-The =rom/org-mode-setup= function sets up org mode indentation, visual-line mode and so on.
+#+BEGIN_SRC emacs-lisp
+(use-package org)
+#+END_SRC
+
+Change the elipsis marker from "..." to an arrow.
 
 #+BEGIN_SRC emacs-lisp
-(defun rom/org-mode-setup ()
+(setq org-ellipsis " ▾" org-hide-emphasis-markers t)
+#+END_SRC
+
+** Org mode faces
+
+The =rom/org-mode-faces= function sets up org mode indentation, visual-line mode and so on.
+
+#+BEGIN_SRC emacs-lisp
+(defun rom/org-mode-faces ()
 
   ;; word wrap
   (visual-line-mode 1)
@@ -410,81 +432,21 @@ The =rom/org-mode-setup= function sets up org mode indentation, visual-line mode
                   (org-level-6 . 1.1)
                   (org-level-7 . 1.1)
                   (org-level-8 . 1.1)))
-      (set-face-attribute (car face) nil :font "sans" :weight 'bold :height (cdr face))))
+      (set-face-attribute (car face) nil :weight 'bold :height (cdr face))))
+
+(add-hook 'org-mode-hook 'rom/org-mode-faces)  
 #+END_SRC
 
-#+RESULTS:
-: rom/org-mode-setup
+** Org mode Goyo
+
+The runction =rom/goyo= uses the visual-fill-column package to center the buffer and word wrap
 
 #+BEGIN_SRC emacs-lisp
-(use-package org
-  :hook (org-mode . rom/org-mode-setup)
-  :config
-  (setq org-ellipsis " ▾"
-        org-hide-emphasis-markers t)
-  (rom/org-mode-setup))
-#+END_SRC
-
-** Org bullets
-
-Heading bullets are replaced with more aesthetic circles.
-
-#+BEGIN_SRC emacs-lisp
-(use-package org-bullets
-  :after org
-  :hook (org-mode . org-bullets-mode)
-  :custom
-  (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
-#+END_SRC
-
-** Center org buffers
-
-visual-fill-column is used to center text such that it is more readable.
-
-#+BEGIN_SRC emacs-lisp
-(defun rom/org-mode-visual-fill ()
+(defun rom/goyo ()
   (setq visual-fill-column-width 100
         visual-fill-column-center-text t)
   (visual-fill-column-mode 1))
 
-(use-package visual-fill-column
-  :hook (org-mode . rom/org-mode-visual-fill))
+(use-package visual-fill-column)
+(add-hook 'org-mode-hook 'rom/goyo)
 #+END_SRC
-
-#+RESULTS:
-
-** Previews
-
-The =rom/org-mode-previews-toggle= enables toggles and $math$ previews 
-
-#+BEGIN_SRC emacs-lisp
-(defun rom/org-previews-toggle ()
-  (org-latex-preview)
-  (org-toggle-inline-images))
-#+END_SRC
-
-#+RESULTS:
-: rom/org-previews-toggle
-
-*** Inline image previews size
-
-Make the maximum size for inline images be a third of the width of the screen
-
-#+BEGIN_SRC emacs-lisp
-(setq org-image-actual-width (/ (display-pixel-width) 3))
-#+END_SRC
-
-#+RESULTS:
-: 640
-
-
-*** LaTeX preview size
-
-Increase the size of LaTeX previews to 150% the default.
-
-#+BEGIN_SRC emacs-lisp
-;(setq org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
-#+END_SRC
-
-#+RESULTS:
-| :foreground | default | :background | default | :scale | 1.5 | :html-foreground | Black | :html-background | Transparent | :html-scale | 1.0 | :matchers | (begin $1 $ $$ \( \[) |
