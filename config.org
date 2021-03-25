@@ -1,123 +1,140 @@
 #+TITLE: Emacs Config
-#+PROPERTY: header-args :tangle ~/.emacs.d/init.el
-
-This org document contains my emacs configuration. In order to write to the actual =init.el= execute the following line with =C-x C-e=
-
-(org-babel-tangle)
-
-* Notes
-** Hooks
-
-Adding a hook to a node means consists in telling emacs to call a function whenever you enter the given mode. For example:
-
-=(add-hook 'text-mode-hook (lambda () (column-number-mode 1)))=
-
-executes the provided lambda (which toggles column number in modeline) whenever we enter text-mode. Likewise you an remove hooks with =remove-hook=:
-
-=(remove-hook 'text-mode-hook (lambda () (column-number-mode 1)))=
-
-Likewise you can simply set the hook to =nil= to clear all hooks:
-
-=(setq org-mode-hook nil)=
-
+#+PROPERTY:header-args :tangle ~/.emacs.d/init.el
 
 * Package initialization
-  
+
 Setting up package sources as well as =use-package=.
 
 #+BEGIN_SRC emacs-lisp
 (require 'package)
-
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                         ("org" . "https://orgmode.org/elpa/")
-                         ("elpa" . "https://elpa.gnu.org/packages/")))
+			 ("org" . "https://orgmode.org/elpa/")
+			 ("elpa" . "https://elpa.gnu.org/packages/")))
 
 (package-initialize)
 (unless package-archive-contents
- (package-refresh-contents))
+  (package-refresh-contents))
 
 ;; Initialize use-package on non-Linux platforms
 (unless (package-installed-p 'use-package)
-   (package-install 'use-package))
+  (package-install 'use-package))
 
 (require 'use-package)
 (setq use-package-always-ensure t)
 #+END_SRC
 
-* Editor settings
-** Basic UI changes
+* Custom functions
+** Goyo
+
+The runction =rom/goyo= uses the visual-fill-column package to center the buffer and word wrap
+
+#+BEGIN_SRC emacs-lisp
+(use-package visual-fill-column)
+
+(defun rom/goyo ()
+  (interactive)
+
+  ; enable word wrap
+  (visual-line-mode 1)
+
+  ; configure visual-fill-column
+  (setq visual-fill-column-width 100
+	visual-fill-column-center-text t)
+
+  ; enable visual-fill-column
+  (visual-fill-column-mode 1))
+#+END_SRC
+
+#+RESULTS:
+: rom/goyo
+
+** Copy filename
+
+Copy the current buffers filename to the clipboard
+
+#+BEGIN_SRC emacs-lisp
+(defun rom/copy-file-name-to-clipboard ()
+  (interactive)
+  (let ((filename (if (equal major-mode 'dired-mode) default-directory (buffer-file-name))))
+    (when filename
+      (kill-new filename)
+      (message "Copied buffer file name '%s' to the clipboard." filename))))
+#+END_SRC
+
+* Basic Settings
+** Disable GUI elements
 
 Remove GUI elements and remove startup screen.
 
 #+BEGIN_SRC emacs-lisp
 (setq inhibit-startup-message t)
 
-(scroll-bar-mode -1)        ; Disable visible scrollbar
-(tool-bar-mode -1)          ; Disable the toolbar
-(tooltip-mode -1)           ; Disable tooltips
-(set-fringe-mode 10)        ; Give some breathing room
-(menu-bar-mode -1)          ; Disable the menu bar
+(scroll-bar-mode -1)        ; disable GUI scrollbar
+(tool-bar-mode -1)          ; disable the toolbar
+(tooltip-mode -1)           ; disable tooltips
+(set-fringe-mode 10)        ; add some horizontal padding to windows
+(menu-bar-mode -1)          ; disable the menu bar
 #+END_SRC
 
-Show text prompts instead of dialog popups
+Show text prompts instead of GUI dialog popups
 
 #+BEGIN_SRC emacs-lisp
 (setq use-dialog-box \nil)
 (defalias 'yes-or-no-p 'y-or-n-p)
 #+END_SRC
 
-Disable blinking cursor
+Disable blinking cursor entirely (ive always found it distracting).
 
 #+BEGIN_SRC emacs-lisp
 (blink-cursor-mode 0)
 #+END_SRC
 
-#+RESULTS:
-
-** Font configuration
-
-I am using Hack Nerd font for monospaced and standard sans serif for sans.
+Make frame title empty by default
 
 #+BEGIN_SRC emacs-lisp
-(defvar rom/default-font-size 110)
-(defvar rom/default-variable-font-size 120)
-
-(set-face-attribute 'default nil :font "Hack Nerd Font" :height rom/default-font-size)
-
-;; Set the fixed pitch face
-(set-face-attribute 'fixed-pitch nil :font "Hack Nerd Font" :height rom/default-font-size)
-
-;; Set the variable pitch face
-(set-face-attribute 'variable-pitch nil :font "sans" :height rom/default-variable-font-size :weight 'regular)
+(setq frame-title-format " ")
 #+END_SRC
 
-#+RESULTS:
+** Fonts
+
+I am using Hack for monospaced and just the default sans serif for variable-width fonts.
+
+#+BEGIN_SRC emacs-lisp
+(defvar rom/default-font-size 115)
+(defvar rom/default-variable-font-size 115)
+
+(set-face-attribute 'default nil :font "Hack FC Ligatured" :height rom/default-font-size)
+(set-face-attribute 'fixed-pitch nil :font "Hack FC Ligatured" :height rom/default-font-size)
+(set-face-attribute 'variable-pitch nil :font "sans" :height rom/default-variable-font-size :weight 'regular)
+#+END_SRC
 
 ** Quality of life changes
 
 Store registers on exit.
 
 #+BEGIN_SRC emacs-lisp
-(savehist-mode 1) 
+(savehist-mode 1)
 (setq savehist-additional-variables '(register-alist))
 #+END_SRC
 
-Dont make backup files
+Dont litter my filesystem with garbage lockfiles and backups
 
 #+BEGIN_SRC emacs-lisp
+(setq create-lockfiles nil)
 (setq make-backup-files nil)
+(setq auto-save-default nil)
 #+END_SRC
 
-Use a visual bell rather than beeping.
-
-#+BEGIN_SRC emacs-lisp
-(setq visible-bell t)
-#+END_SRC
-
-Disable alarms entirely
+Disable alarms and beeping entirely
 
 #+BEGIN_SRC emacs-lisp
 (setq ring-bell-function 'ignore)
+#+END_SRC
+
+Make it so that you can anser yes-no prompts with just "y" or "n"
+
+#+BEGIN_SRC emacs-lisp
+(fset 'yes-or-no-p 'y-or-n-p)
 #+END_SRC
 
 Make =Esc= quit prompts.
@@ -130,8 +147,33 @@ Use system clipboard
 
 #+BEGIN_SRC emacs-lisp
 (setq select-enable-clipboard t)
-(setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING))
 (setq mouse-yank-at-point t)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(setq confirm-kill-emacs 'y-or-n-p)
+#+END_SRC
+
+Trust all themes
+
+#+BEGIN_SRC emacs-lisp
+(setq custom-safe-themes t)
+#+END_SRC
+
+Always use UTF-8
+
+#+BEGIN_SRC emacs-lisp
+(prefer-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(setq default-buffer-fle-coding-system 'utf-8)
+#+END_SRC
+
+Dont prompt me to kill a buffer with a process
+
+#+BEGIN_SRC emacs-lisp
+(setq confirm-kill-processes nil)
 #+END_SRC
 
 Increase undo limits
@@ -142,67 +184,29 @@ Increase undo limits
 (setq undo-outer-limit 1006632960)
 #+END_SRC
 
-** Scrolling
+When I do =C-x k= immediately close the current buffer, dont ask for which one to close.
 
 #+BEGIN_SRC emacs-lisp
-(use-package smooth-scroll)
-(smooth-scrolling-mode 1)
+(global-set-key (kbd "C-x k") 'kill-this-buffer)
 #+END_SRC
 
-#+RESULTS:
-: t
-
-** Indentation
+Clean up trailing lines and whitespace when writing to a file
 
 #+BEGIN_SRC emacs-lisp
-(setq default-tab-width 4)
-(setq tab-width 4)
-(setq default-fill-column 80)
-(setq fill-column 80)
-(setq-default evil-indent-convert-tabs nil)
-(setq-default indent-tabs-mode nil)
-(setq-default tab-width 4)
-(setq-default evil-shift-round nil)
+(add-hook 'before-save-hook 'whitespace-cleanup)
 #+END_SRC
 
-** UTF-8
-
-Always use UTF-8
+Increase garbage collection threshold
 
 #+BEGIN_SRC emacs-lisp
-(prefer-coding-system 'utf-8) 
-(set-default-coding-systems 'utf-8) 
-(set-terminal-coding-system 'utf-8) 
-(set-keyboard-coding-system 'utf-8) 
-(setq default-buffer-fle-coding-system 'utf-8) 
+(setq gc-cons-threshold 100000000)
 #+END_SRC
 
-** Line numbers
-
-Enable line numbers by default
+Use system trash when deleting stuff
 
 #+BEGIN_SRC emacs-lisp
-(global-display-line-numbers-mode 1)
+(setq delete-by-moving-to-trash t)
 #+END_SRC
-
-#+RESULTS:
-: t
-
-Disable line numbers on certain modes
-
-#+BEGIN_SRC emacs-lisp
-(dolist (mode '(org-mode-hook
-                term-mode-hook
-                shell-mode-hook
-                eshell-mode-hook
-                dired-mode-hook
-                ielm-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 0))))
-#+END_SRC
-
-#+RESULTS:
-
-** Word wrapping
 
 Disable word wrapping by default
 
@@ -210,173 +214,134 @@ Disable word wrapping by default
 (setq-default truncate-lines t)
 #+END_SRC
 
-#+RESULTS:
-: t
-
-** Code folding
-
-Origami is used to implement code folding
+Indicate empty lines
 
 #+BEGIN_SRC emacs-lisp
-(use-package origami)
-(global-origami-mode)
+(setq-default indicate-empty-lines t)
 #+END_SRC
 
-#+RESULTS:
-: t
-
-** Parentheses
-
-*** Auto matching
-
-The autopair package is used for auto-matching
+** Scrolling
 
 #+BEGIN_SRC emacs-lisp
-(use-package autopair)
-(autopair-global-mode)
+(setq scroll-step 1
+
+      ; vim style keyboard scrolling
+      scroll-margin 3
+      scroll-conservatively 9999
+
+      ; mouse scroll by one line and by 2 when holding shift
+      mouse-wheel-scroll-amount '(1 ((shift) . 2))
+      mouse-wheel-progressive-speed nil
+      mouse-wheel-follow-mouse 't
+      mouse-wheel-inhibit-click-time nil
+
+      ; horizontal scrolliing for long lines
+      hscroll-step 1
+      hscroll-margin 10)
 #+END_SRC
 
-#+RESULTS:
-: t
-
-*** Rainbow parens
-
-Rainbow delimiters are used for clarity and matching parnes are highlighted.
+** Parens
 
 #+BEGIN_SRC emacs-lisp
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
 
+(electric-pair-mode 1)
 (show-paren-mode 1)
-(setq blink-matching-paren nil)
-(setq show-paren-delay 0.2)
-(setq show-paren-highlight-openparen t)
-(setq show-paren-when-point-inside-paren t)
 #+END_SRC
 
-** Concealing
-  Display "lambda" as λ
+#+RESULTS:
+: t
+
+** Line numbers
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'prog-mode (lambda () (display-line-numbers-mode 1)))
+#+END_SRC
+
+#+RESULTS:
+| lambda | nil | (display-line-numbers-mode 1) |
+
+** Conceal
 
 #+BEGIN_SRC emacs-lisp
 (global-prettify-symbols-mode 1)
 #+END_SRC
 
-#+RESULTS:
-: t
-
 * Aesthetics
 
-Nord theme is my theme of choice.
+Doom-Nord theme is my theme of choice. Also I like using a yellow cursor (makes it easyer to find).
 
 #+BEGIN_SRC emacs-lisp
-(use-package nord-theme)
-(load-theme 'nord t)
+(use-package doom-themes
+  :ensure t
+  :init
+  (setq doom-nord-comment-bg t)
+  :config
+  (load-theme 'doom-nord t)
+  (set-cursor-color "#ebcb8b"))
 #+END_SRC
+
+#+RESULTS:
+: t
 
 The modeline being used is Doom Modeline, taken from doom emacs.
 
 #+BEGIN_SRC emacs-lisp
-(use-package all-the-icons)
+(use-package all-the-icons
+  :config
+  (setq all-the-icons-scale-factor 1.0))
+
 (use-package doom-modeline
   :hook (after-init . doom-modeline-mode)
-  :custom    
+  :custom
   (doom-modeline-height 25)
-  (doom-modeline-bar-width 0)
   (doom-modeline-icon t)
-  (doom-modeline-major-mode-icon t)
   (doom-modeline-major-mode-color-icon t)
-  (doom-modeline-buffer-file-name-style 'truncate-upto-project)
+  (doom-modeline-buffer-file-name-style 'auto)
   (doom-modeline-buffer-state-icon t)
-  (doom-modeline-buffer-modification-icon t)
+  (doom-modeline-buffer-modification-icon nil)
   (doom-modeline-minor-modes nil)
-  (doom-modeline-enable-word-count t)
-  (doom-modeline-buffer-encoding t)
   (doom-modeline-indent-info nil)
   (doom-modeline-checker-simple-format t)
   (doom-modeline-vcs-max-length 12)
+  (doom-modeline-workspace-name t)
   (doom-modeline-env-version t)
-  (doom-modeline-irc-stylize 'identity)
-  (doom-modeline-github-timer nil)
-  (doom-modeline-gnus-timer nil))
-#+END_SRC
-
-dome-modeline-height
-
-* IVY and Counsel
-
-Use IVY to autocomplete buffers, file search, etc.
-
-#+BEGIN_SRC emacs-lisp
-(use-package ivy
-  :diminish
-  :bind (("C-s" . swiper)	
-         :map ivy-minibuffer-map
-         ("TAB" . ivy-alt-done)	
-         ("C-l" . ivy-alt-done)
-         ("C-j" . ivy-next-line)
-         ("C-k" . ivy-previous-line)
-         :map ivy-switch-buffer-map
-         ("C-k" . ivy-previous-line)
-         ("C-l" . ivy-done)
-         ("C-d" . ivy-switch-buffer-kill)
-         :map ivy-reverse-i-search-map
-         ("C-k" . ivy-previous-line)
-         ("C-d" . ivy-reverse-i-search-kill))
+  (doom-modeline-lsp t)
+  (doom-modeline-buffer-encoding nil)
   :config
-  (ivy-mode 1))
-
+  (line-number-mode 1)
+  (column-number-mode 1))
 #+END_SRC
 
-#+RESULTS:
+* Keybindings
+** Evil mode
 
-Ivy-rich adds some extra columns to some counsel commands to provide more information about them.
-
-#+BEGIN_SRC emacs-lisp
-(use-package ivy-rich
-  :init
-  (ivy-rich-mode 1))
-#+END_SRC
-
-#+RESULTS:
-
-Counsel provides replacements to some command such as =find-file= and =switch-buffer= and so on.
-
-#+BEGIN_SRC emacs-lisp
-(use-package counsel
-  :custom
-  (counsel-linux-app-format-function #'counsel-linux-app-format-function-name-only)
-  :config
-  (counsel-mode 1))
-#+END_SRC
-
-#+RESULTS:
-: t
-
-* Evil Mode
-   
 Main vim-emulation plugin
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil
+  :ensure t
   :init
   (setq evil-want-integration t)
   (setq evil-want-keybinding nil)
   (setq evil-want-C-u-scroll t)
   (setq evil-want-C-i-jump nil)
+  (setq evil-undo-system 'undo-tree)
   :config
+  (setq evil-echo-state nil)
   (evil-mode 1)
-  (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
-  (define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
 
-  ;; Use visual line motions even outside of visual-line-mode buffers
+  ;; Use visual line motions
   (evil-global-set-key 'motion "j" 'evil-next-visual-line)
   (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
 
   (evil-set-initial-state 'messages-buffer-mode 'normal)
-  (evil-set-initial-state 'dashboard-mode 'normal))
+  (evil-set-initial-state 'dashboard-mode 'normal)
+  (evil-set-initial-state 'vterm-mode 'emacs))
 #+END_SRC
 
-evil collection enhances evil mode
+/evilifies/ certain modes
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-collection
@@ -385,68 +350,541 @@ evil collection enhances evil mode
   (evil-collection-init))
 #+END_SRC
 
-#+RESULTS:
-: t
-
-Map insert mode =jj= to =Esc=
+Extends evil with a clone of vim-surround
 
 #+BEGIN_SRC emacs-lisp
-(use-package key-chord)
-(key-chord-mode 1)
-(setq key-chord-two-keys-delay 0.5)
-(key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
-(key-chord-mode 1)
+(use-package evil-surround
+  :demand t
+  :config
+  (global-evil-surround-mode 1))
+#+END_SRC
+
+Likewise vim-commentary keybinds are supported
+
+#+BEGIN_SRC emacs-lisp
+(use-package evil-commentary
+  :config
+  (evil-commentary-mode 1))
+#+END_SRC
+
+imap jj <Esc>
+
+#+BEGIN_SRC emacs-lisp
+(use-package key-chord
+  :config
+  (setq key-chord-two-keys-delay 0.5)
+  (key-chord-define evil-insert-state-map "jj" 'evil-normal-state)
+  (key-chord-mode 1))
+#+END_SRC
+
+** Leader keys
+
+Use Space as leader key and set some bindings
+
+#+BEGIN_SRC emacs-lisp
+(evil-set-leader 'normal (kbd "<SPC>"))
+
+(evil-define-key 'normal 'global (kbd "<leader>k") 'kill-this-buffer)
+(evil-define-key 'normal 'global (kbd "<leader>f") 'counsel-find-file)
+(evil-define-key 'normal 'global (kbd "<leader>RET") 'bookmark-jump)
+(evil-define-key 'normal 'global (kbd "<leader>d") 'dired-jump)
+(evil-define-key 'normal 'global (kbd "<leader>r") 'counsel-recentf)
+(evil-define-key 'normal 'global (kbd "<leader>j") 'counsel-imenu)
+(evil-define-key 'normal 'global (kbd "<leader>l") 'counsel-locate)
+#+END_SRC
+
+Map =C-==, =C-+= and =C--= to control text scale
+
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-=") 'text-scale-increase)
+(global-set-key (kbd "C--") 'text-scale-decrease)
+(global-set-key (kbd "C-0") '-text-scale-reset)
+#+END_SRC
+
+* Dired
+
+#+BEGIN_SRC emacs-lisp
+(use-package dired
+  :ensure nil
+  :commands (dired dired-jump)
+  :bind (("C-x C-j" . dired-jump))
+  :custom ((dired-listing-switches "-agho --group-directories-first"))
+  :config
+  (setq dired-recursive-copies (quote always))
+  (setq dired-recursive-deletes (quote top)))
+#+END_SRC
+
+Dired single allows me to move through directories without creating whole new buffers, I bind =h= and =l= in evil normal mode to move up and down directories.
+
+#+BEGIN_SRC emacs-lisp
+(use-package dired-single)
+
+(evil-collection-define-key 'normal 'dired-mode-map
+   "h" 'dired-single-up-directory
+   "l" 'dired-single-buffer)
+#+END_SRC
+
+Hide dotfiles and details by default.
+
+#+BEGIN_SRC emacs-lisp
+(use-package dired-hide-dotfiles
+  :hook (dired-mode . dired-hide-dotfiles-mode)
+  :config
+  (evil-collection-define-key 'normal 'dired-mode-map
+    "." 'dired-hide-dotfiles-mode))
+
+(defun rom/dired-mode-setup ()
+  (dired-hide-details-mode 1))
+
+(add-hook 'dired-mode-hook 'rom/dired-mode-setup)
+#+END_SRC
+
+Use icons in dired.
+
+#+BEGIN_SRC emacs-lisp
+(use-package all-the-icons-dired
+  :after all-the-icons
+  :hook (dired-mode . all-the-icons-dired-mode))
+#+END_SRC
+
+Auto-reload dired
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'dired-mode-hook 'auto-revert-mode)
+#+END_SRC
+
+Dired peep allows you to preview a file without having to open it. Supports images.
+
+#+BEGIN_SRC emacs-lisp
+(use-package peep-dired
+  :ensure t
+  :config
+  (evil-collection-define-key 'normal 'dired-mode-map "P" 'peep-dired))
+#+END_SRC
+
+* Ivy, Counsel and Swiper
+
+Use IVY to autocomplete buffers, file search, etc.
+
+#+BEGIN_SRC emacs-lisp
+(use-package ivy
+  :diminish
+  :bind (("C-s" . swiper)
+	 :map ivy-minibuffer-map
+	 ("TAB" . ivy-alt-done)
+	 ("C-l" . ivy-alt-done)
+	 ("C-j" . ivy-next-line)
+	 ("C-k" . ivy-previous-line)
+	 ("C-d" . ivy-kill-line)
+	 :map ivy-switch-buffer-map
+	 ("C-k" . ivy-previous-line)
+	 ("C-l" . ivy-done)
+	 ("C-d" . ivy-switch-buffer-kill)
+	 ("C-o" . ivy-switch-buffer-other-window)
+	 :map ivy-reverse-i-search-map
+	 ("C-k" . ivy-previous-line)
+	 ("C-d" . ivy-reverse-i-search-kill))
+  :config
+  (setq ivy-use-virtual-buffers t)
+  (setq enable-recursive-minibuffers t)
+  (ivy-mode 1))
+#+END_SRC
+
+Ivy-rich adds some extra columns to some counsel commands to provide more information about them.
+
+#+BEGIN_SRC emacs-lisp
+(use-package ivy-rich
+  :diminish
+  :init
+  (ivy-rich-mode 1))
+#+END_SRC
+
+Counsel provides replacements to some command such as =find-file= and =switch-buffer= and so on.
+
+#+BEGIN_SRC emacs-lisp
+(use-package counsel
+  :diminish
+  :custom
+  (counsel-linux-app-format-function #'counsel-linux-app-format-function-name-only)
+  :config
+  (counsel-mode 1))
+#+END_SRC
+
+* Company
+
+Company mode provides a general purpose code completion system which is used by LSP, and other backends.
+
+#+BEGIN_SRC emacs-lisp
+(use-package company
+  :ensure t
+  :init
+  (add-hook 'prog-mode-hook 'company-mode)
+  :config
+  (setq company-idle-delay 0)
+  (setq company-minimum-prefix-length 1)
+  (company-tng-configure-default))
+#+END_SRC
+
+* LSP mode
+
+LSP mode provides a language-server protocol implementation which gives provides intelligent syntax checking and code completion.
+
+#+BEGIN_SRC emacs-lisp
+(use-package lsp-mode
+  :init
+  (setq lsp-keymap-prefix "C-c C-l")
+  :hook (
+     (c-mode . lsp)
+     (python-mode . lsp)
+     (java-mode . lsp))
+  :commands lsp)
+
+(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
+#+END_SRC
+
+LSP ui adds visual ui to LSP mode.
+
+ #+BEGIN_SRC emacs-lisp
+(use-package lsp-ui
+  :init
+  (setq lsp-headerline-breadcrumb-enable nil)
+  (setq lsp-lens-enable nil)
+  (setq lsp-signature-render-documentation nil)
+  (setq lsp-ui-doc-enable nil)
+  :config
+  (evil-collection-define-key 'normal 'lsp-ui-mode-map "K" 'lsp-ui-doc-glance))
+#+END_SRC
+
+* Comint
+
+bind =C-l= to clear the screen in all shell-like modes
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'shell-mode-hook
+	  (lambda () (define-key shell-mode-map "\C-l" 'comint-clear-buffer)))
+
+(add-hook 'gud-mode-hook
+	  (lambda () (define-key gud-mode-map "\C-l" 'comint-clear-buffer)))
+
+(add-hook 'term-mode-hook
+	  (lambda () (define-key term-mode-map "\C-l" 'comint-clear-buffer)))
+
+(add-hook 'comint-mode-hook
+	  (lambda () (define-key comint-mode-map "\C-l" 'comint-clear-buffer)))
+#+END_SRC
+
+* Projectile
+
+#+BEGIN_SRC emacs-lisp
+(use-package projectile
+  :ensure t
+  :init
+  (projectile-mode +1)
+  :bind (:map projectile-mode-map ("C-c p" . projectile-command-map)))
+#+END_SRC
+
+* Other packages
+** Vterm
+
+ #+BEGIN_SRC emacs-lisp
+ (use-package vterm)
+ #+END_SRC
+
+** Helpful
+
+Replace standard help commands with more helpful alternatives.
+
+#+BEGIN_SRC emacs-lisp
+(use-package helpful
+  :commands (helpful-callable helpful-variable helpful-command helpful-key)
+  :custom
+  (counsel-describe-function-function #'helpful-callable)
+  (counsel-describe-variable-function #'helpful-variable)
+  :bind
+  ([remap describe-function] . counsel-describe-function)
+  ([remap describe-command] . helpful-command)
+  ([remap describe-variable] . counsel-describe-variable)
+  ([remap describe-key] . helpful-key))
+#+END_SRC
+
+** Undo-tree
+
+Nicer undo package
+
+#+BEGIN_SRC emacs-lisp
+(use-package undo-tree
+  :ensure t
+  :init
+  (global-undo-tree-mode))
+#+END_SRC
+
+** Highlight TODO
+
+#+BEGIN_SRC emacs-lisp
+(use-package hl-todo
+       :ensure t
+       :custom-face
+       (hl-todo ((t (:inherit hl-todo :italic t))))
+       :hook ((prog-mode . hl-todo-mode)
+	      (yaml-mode . hl-todo-mode)))
+#+END_SRC
+
+** Treesitter
+
+Treesitter gives enhanced syntax-based font-locking.
+
+#+BEGIN_SRC emacs-lisp
+(use-package tree-sitter)
+
+(use-package tree-sitter-langs)
+
+(global-tree-sitter-mode)
+(add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
+#+END_SRC
+
+** Recentf
+
+Makes it easy to open recent files
+
+#+BEGIN_SRC emacs-lisp
+(use-package recentf
+  :config
+  (setq recentf-max-saved-items 50)
+  (setq recentf-auto-cleanup 'never)
+  (recentf-mode t))
+#+END_SRC
+
+** TRAMP
+
+#+BEGIN_SRC emacs-lisp
+(use-package tramp
+  :config
+  (setq tramp-default-method "ssh"))
+#+END_SRC
+
+** ** Origami
+
+#+BEGIN_SRC emacs-lisp
+(use-package origami
+  :config
+  (global-origami-mode 1)
+  (push '(scala-mode . origami-c-style-parser) origami-parser-alist))
 #+END_SRC
 
 #+RESULTS:
 : t
 
-* ORG
+** Zoom window
 
 #+BEGIN_SRC emacs-lisp
-(use-package org)
+(use-package zoom-window
+  :config
+  (setq zoom-window-mode-line-color "black"))
+
+(global-set-key (kbd "M-z") 'zoom-window-zoom)
 #+END_SRC
 
-Change the elipsis marker from "..." to an arrow.
+#+RESULTS:
+: zoom-window-zoom
+
+** Crux
+
+Crux is: a Collection of Ridiculously Useful eXtensions.
 
 #+BEGIN_SRC emacs-lisp
-(setq org-ellipsis " ▾" org-hide-emphasis-markers t)
+(use-package crux)
 #+END_SRC
 
-** Org mode faces
-
-The =rom/org-mode-faces= function sets up org mode indentation, visual-line mode and so on.
+* Filetypes
+** Scala
 
 #+BEGIN_SRC emacs-lisp
-(defun rom/org-mode-faces ()
-
-  ;; word wrap
-  (visual-line-mode 1)
-
-  ;; Set heading face sizes
-  (dolist (face '((org-level-1 . 1.4)
-                  (org-level-2 . 1.3)
-                  (org-level-3 . 1.2)
-                  (org-level-4 . 1.1)
-                  (org-level-5 . 1.1)
-                  (org-level-6 . 1.1)
-                  (org-level-7 . 1.1)
-                  (org-level-8 . 1.1)))
-      (set-face-attribute (car face) nil :weight 'bold :height (cdr face))))
-
-(add-hook 'org-mode-hook 'rom/org-mode-faces)  
+(use-package scala-mode
+  :interpreter
+    ("scala" . scala-mode))
 #+END_SRC
 
-** Org mode Goyo
-
-The runction =rom/goyo= uses the visual-fill-column package to center the buffer and word wrap
+** Haskell
 
 #+BEGIN_SRC emacs-lisp
-(defun rom/goyo ()
-  (setq visual-fill-column-width 100
-        visual-fill-column-center-text t)
-  (visual-fill-column-mode 1))
-
-(use-package visual-fill-column)
-(add-hook 'org-mode-hook 'rom/goyo)
+(use-package haskell-mode)
 #+END_SRC
+
+** Markdown
+
+#+BEGIN_SRC emacs-lisp
+(use-package markdown-mode
+  :ensure t)
+#+END_SRC
+
+*** Center markdown buffers
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'markdown-mode-hook 'rom/goyo)
+#+END_SRC
+
+** Python
+
+#+BEGIN_SRC emacs-lisp
+(setq python-shell-interpreter "ipython"
+      python-shell-interpreter-args "-i --simple-prompt --InteractiveShell.display_page=True")
+#+END_SRC
+
+** vimscript
+
+#+BEGIN_SRC emacs-lisp
+(use-package vimrc-mode)
+#+END_SRC
+
+** Org Mode
+
+ #+BEGIN_SRC emacs-lisp
+ (use-package org
+   :config
+   (setq org-ellipsis " ▾"
+	 org-hide-emphasis-markers t
+	 org-edit-src-content-indentation 0
+	 org-highlight-latex-and-related '(latex)
+	 org-format-latex-options (plist-put org-format-latex-options :scale 1.50))
+)
+ #+END_SRC
+
+ #+RESULTS:
+ : t
+
+*** Org mode faces
+
+ #+BEGIN_SRC emacs-lisp
+ (defun rom/org-mode-faces ()
+
+   ;; word wrap
+   (visual-line-mode 1)
+
+   ;; Set heading face sizes
+   (dolist (face '((org-level-1 . 1.4)
+		   (org-level-2 . 1.3)
+		   (org-level-3 . 1.2)
+		   (org-level-4 . 1.1)
+		   (org-level-5 . 1.1)
+		   (org-level-6 . 1.1)
+		   (org-level-7 . 1.1)
+		   (org-level-8 . 1.1)))
+       (set-face-attribute (car face) nil :weight 'bold :height (cdr face))))
+
+ (add-hook 'org-mode-hook 'rom/org-mode-faces)
+ #+END_SRC
+
+*** Center org buffers
+
+ #+BEGIN_SRC emacs-lisp
+ (add-hook 'org-mode-hook 'rom/goyo)
+ #+END_SRC
+
+*** Prettify-symbols
+
+ Overrride =prettify-symbols-alist= and enable the mode whenever in org mode.
+
+ #+BEGIN_SRC emacs-lisp
+ (defun rom/org-pretty-symbols ()
+     (push '("#+TITLE: "        . "") prettify-symbols-alist)
+     (push '("#+SUBTITLE: "     . "") prettify-symbols-alist)
+     (push '("* "               . "") prettify-symbols-alist)
+     (push '("** "              . "") prettify-symbols-alist)
+     (push '("*** "             . "") prettify-symbols-alist)
+     (push '("**** "            . "") prettify-symbols-alist)
+     (push '("***** "           . "") prettify-symbols-alist)
+     (push '("#+AUTHOR: "       . "- ") prettify-symbols-alist)
+     (push '(":PROPERTIES:"     . ":") prettify-symbols-alist)
+     (push '("#+PROPERTY:"      . ":") prettify-symbols-alist)
+     (push '("#+BEGIN_SRC"      . "λ") prettify-symbols-alist)
+     (push '("#+END_SRC"        . "-") prettify-symbols-alist)
+     (push '("#+RESULTS:"       . "»") prettify-symbols-alist)
+     (push '(":end:"            . "-") prettify-symbols-alist)
+     (push '(":results:"        . "-") prettify-symbols-alist)
+     (push '("#+NAME:"          . "-") prettify-symbols-alist)
+     (push '("#+BEGIN_EXAMPLE"  . "~") prettify-symbols-alist)
+     (push '("#+END_EXAMPLE"    . "~") prettify-symbols-alist)
+     (push '("#+BEGIN_VERBATIM" . "") prettify-symbols-alist)
+     (push '("#+END_VERBATIM"   . "") prettify-symbols-alist)
+     (push '("#+BEGIN_VERSE"    . "") prettify-symbols-alist)
+     (push '("#+END_VERSE"      . "") prettify-symbols-alist)
+     (push '("#+BEGIN_QUOTE"    . "") prettify-symbols-alist)
+     (push '("#+END_QUOTE"      . "") prettify-symbols-alist)
+     (push '("#+TBFLM:"         . "∫") prettify-symbols-alist)
+     (push '("[X]"              . (?\[ (Br . Bl) ?✓ (Br . Bl) ?\])) prettify-symbols-alist)
+     (push '("\\\\"             . "↩") prettify-symbols-alist)
+     (prettify-symbols-mode t))
+
+ (add-hook 'org-mode-hook 'rom/org-pretty-symbols)
+ #+END_SRC
+
+* * Buffer Managment
+** Bufler
+
+#+BEGIN_SRC emacs-lisp
+(use-package bufler)
+(bufler-mode 1)
+
+(global-set-key (kbd "<menu>") 'bufler-list)
+
+(evil-define-key 'normal 'global (kbd "<leader>b") 'bufler-switch-buffer)
+
+(evil-define-key 'normal bufler-list-mode-map (kbd "d") 'bufler-list-buffer-kill)
+(evil-define-key 'normal bufler-list-mode-map (kbd "w") 'bufler-list-buffer-save)
+(evil-define-key 'normal bufler-list-mode-map (kbd "F") 'bufler-list-group-make-frame)
+(evil-define-key 'normal bufler-list-mode-map (kbd "f") 'bufler-list-group-frame)
+(evil-define-key 'normal bufler-list-mode-map (kbd "<RET>") 'bufler-list-buffer-switch)
+#+END_SRC
+
+#+RESULTS:
+** Ace window
+
+#+BEGIN_SRC emacs-lisp
+(use-package windmove
+  :config
+  (global-set-key (kbd "H-h")  'windmove-left)
+  (global-set-key (kbd "H-l") 'windmove-right)
+  (global-set-key (kbd "H-k")    'windmove-up)
+  (global-set-key (kbd "H-j")  'windmove-down)
+
+  (global-set-key (kbd "H-c")  'delete-window)
+
+)
+#+END_SRC
+
+#+RESULTS:
+: t
+* Org publish
+
+#+BEGIN_SRC emacs-lisp
+(setq org-publish-project-alist
+      '(("orgfiles"
+	 :base-directory "~/org/nb"
+	 :base-extension "org"
+	 :publishing-directory "~/org-html/nb/"
+	 :publishing-function org-html-publish-to-html
+	 :exclude "PrivatePage.org" ;; regexp
+	 :headline-levels 3
+	 :section-numbers nil
+	 :with-toc nil
+	 :html-head "<link rel=\"stylesheet\"
+		  href=\"../other/style.css\" type=\"text/css\"/>"
+	 :html-preamble t)
+
+	("images"
+	 :base-directory "~/org/img/"
+	 :base-extension "jpg\\|gif\\|png"
+	 :publishing-directory "~/org-html/img/"
+	 :publishing-function org-publish-attachment)
+
+	("other"
+	 :base-directory "~/other/"
+	 :base-extension "css\\|el"
+	 :publishing-directory "~/org-html/other/"
+	 :publishing-function org-publish-attachment)
+
+	 ("wiki" :components ("orgfiles" "images" "other"))))
+#+END_SRC
+
+#+RESULTS:
+| orgfiles | :base-directory | ~/org/nb | :base-extension | org | :publishing-directory | ~/org-html/nb/ | :publishing-function | org-html-publish-to-html | :exclude | PrivatePage.org | :headline-levels | 3 | :section-numbers | nil | :with-toc | nil | :html-head | <link rel="stylesheet" |

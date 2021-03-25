@@ -1,0 +1,56 @@
+#+TITLE: Notes
+
+* Keybinding
+
+A /keymap/ is an internal data structure that binds keys to their associated actions. Each buffer has an associated keymap. Keys in a keymap can be divided into three categories:
+
+- *undefined* The key is not bound to an operation
+- *prefix key* form a part of a complete key
+- *complete key* a key that executes an operation when pressed
+
+** keymap commands
+
+*** (define-key KEYMAP KEYDEF)
+
+Defines a key against a keyboard map.
+
+*** (local-set-key KEY COMMAND) and (local-unset-key KEY)
+
+Binds/unbinds a key to the local keymap in the active buffer to a command
+
+*** (global-set-key KEY COMMAND) and (global-unset-key KEY)
+
+Binds/unbinds a key to the global keymap in the active buffer to a command
+
+** Representing KEYS in code
+
+The simplest way to do this is with the =kbd= marcro. It works like this:
+
+#+BEGIN_SRC emacs-lisp
+(kbd "C-c p")
+#+END_SRC
+
+#+RESULTS:
+: p
+
+** Keymap lookup order
+
+The key pressed is looked up in several keymaps and the first match is executed. The precendence order is:
+
+1. =overriding-local-map= keys that should override all other keymaps (avoid this)
+2. =minor-mode-overriding-map-alist= for overriding the keymaps used by minor modes
+3. =minor-mode-map-alist= keymaps used by minor modes
+4. =current-local-map= for keymaps defined in the buffers current local map
+5. =current-global-map= for keybinds defined in the global keymap
+
+** Defining the command
+
+An emacs /command/ is one that has the =(interactive ...)= statement at the top of a function body. This tells emacs that the function should be callable through =M-x=.
+
+* Examples
+
+Say we want to extend =python-mode= by adding a key that switches to the python process buffer. This can be done with
+
+#+BEGIN_SRC emacs-lisp
+(define-key python-mode-map (kbd "<f12>") 'python-switch-to-python)
+#+END_SRC

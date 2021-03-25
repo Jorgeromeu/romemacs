@@ -1,3 +1,0 @@
-# RomEmacs
-
-![emacs](./emacs.png)
