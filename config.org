@@ -1,15 +1,16 @@
 #+TITLE: Emacs Config
 #+PROPERTY:header-args :tangle ~/.emacs.d/init.el
 
-* Package initialization
+* =package.el= and =use-package= setup
 
-Setting up package sources as well as =use-package=.
+Setting up package sources as well as =use-package=. This makes further
+package installations very easy.
 
 #+BEGIN_SRC emacs-lisp
 (require 'package)
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
-			 ("org" . "https://orgmode.org/elpa/")
-			 ("elpa" . "https://elpa.gnu.org/packages/")))
+                         ("org" . "https://orgmode.org/elpa/")
+                         ("elpa" . "https://elpa.gnu.org/packages/")))
 
 (package-initialize)
 (unless package-archive-contents
@@ -23,44 +24,6 @@ Setting up package sources as well as =use-package=.
 (setq use-package-always-ensure t)
 #+END_SRC
 
-* Custom functions
-** Goyo
-
-The runction =rom/goyo= uses the visual-fill-column package to center the buffer and word wrap
-
-#+BEGIN_SRC emacs-lisp
-(use-package visual-fill-column)
-
-(defun rom/goyo ()
-  (interactive)
-
-  ; enable word wrap
-  (visual-line-mode 1)
-
-  ; configure visual-fill-column
-  (setq visual-fill-column-width 100
-	visual-fill-column-center-text t)
-
-  ; enable visual-fill-column
-  (visual-fill-column-mode 1))
-#+END_SRC
-
-#+RESULTS:
-: rom/goyo
-
-** Copy filename
-
-Copy the current buffers filename to the clipboard
-
-#+BEGIN_SRC emacs-lisp
-(defun rom/copy-file-name-to-clipboard ()
-  (interactive)
-  (let ((filename (if (equal major-mode 'dired-mode) default-directory (buffer-file-name))))
-    (when filename
-      (kill-new filename)
-      (message "Copied buffer file name '%s' to the clipboard." filename))))
-#+END_SRC
-
 * Basic Settings
 ** Disable GUI elements
 
@@ -69,21 +32,21 @@ Remove GUI elements and remove startup screen.
 #+BEGIN_SRC emacs-lisp
 (setq inhibit-startup-message t)
 
-(scroll-bar-mode -1)        ; disable GUI scrollbar
-(tool-bar-mode -1)          ; disable the toolbar
-(tooltip-mode -1)           ; disable tooltips
-(set-fringe-mode 10)        ; add some horizontal padding to windows
-(menu-bar-mode -1)          ; disable the menu bar
+(scroll-bar-mode 0)
+(tool-bar-mode 0)
+(tooltip-mode 0)
+(set-fringe-mode 10)
+(menu-bar-mode 0)
 #+END_SRC
 
-Show text prompts instead of GUI dialog popups
+Show y/n text prompts prompts instead of GUI dialog popups
 
 #+BEGIN_SRC emacs-lisp
-(setq use-dialog-box \nil)
+(setq use-dialog-box nil)
 (defalias 'yes-or-no-p 'y-or-n-p)
 #+END_SRC
 
-Disable blinking cursor entirely (ive always found it distracting).
+Disable blinking cursor entirely (i've always found it distracting)
 
 #+BEGIN_SRC emacs-lisp
 (blink-cursor-mode 0)
@@ -92,38 +55,50 @@ Disable blinking cursor entirely (ive always found it distracting).
 Make frame title empty by default
 
 #+BEGIN_SRC emacs-lisp
-(setq frame-title-format " ")
+(setq frame-title-format "")
 #+END_SRC
 
 ** Fonts
 
-I am using Hack for monospaced and just the default sans serif for variable-width fonts.
+I am using [[https:github.com/gaplo916/Ligatured-Hack][ligatured Hack]] as my font. This is a fork of Hack but with
+ligatures. I use Hack because it is one of the only monospaced fonts I
+know of that looks good in code but also for text.
 
 #+BEGIN_SRC emacs-lisp
-(defvar rom/default-font-size 115)
-(defvar rom/default-variable-font-size 115)
+(defun rom/fonts-setup ()
+  (set-frame-font "Hack FC Ligatured-12"))
 
-(set-face-attribute 'default nil :font "Hack FC Ligatured" :height rom/default-font-size)
-(set-face-attribute 'fixed-pitch nil :font "Hack FC Ligatured" :height rom/default-font-size)
-(set-face-attribute 'variable-pitch nil :font "sans" :height rom/default-variable-font-size :weight 'regular)
+(rom/fonts-setup)
+(add-hook 'server-after-make-frame-hook 'rom/fonts-setup)
 #+END_SRC
 
-** Quality of life changes
-
-Store registers on exit.
+I use [[https:github.com/mickeynp/ligature.el][ligature.el]] to get typographic ligatures. I dont enable all of
+them but rather limit myself to basic arrows and operators. I find
+some of the ligatures such as www distracting and unnecesary.
 
 #+BEGIN_SRC emacs-lisp
-(savehist-mode 1)
-(setq savehist-additional-variables '(register-alist))
+(use-package ligature
+  :load-path "~/.emacs.d/ligature.el"
+  :config
+
+  (ligature-set-ligatures 't '("<-" "->" "<->" "-->" "<--" "=>" "<==" "==>" "<=>"
+                               ":=" "=!=" "!=" "^=" ".="
+                               ;; ">>" "<<" ">>>" "<<<"
+                               "<=" ">=" "<>"
+                               ;; "--" "++"
+                               "<!--"
+                               ))
+
+
+  ;; Enables ligature checks globally in all buffers. You can also do it
+  ;; per mode with `ligature-mode'.
+  (global-ligature-mode t))
 #+END_SRC
 
-Dont litter my filesystem with garbage lockfiles and backups
+#+RESULTS:
+: t
 
-#+BEGIN_SRC emacs-lisp
-(setq create-lockfiles nil)
-(setq make-backup-files nil)
-(setq auto-save-default nil)
-#+END_SRC
+** Quality of life settings
 
 Disable alarms and beeping entirely
 
@@ -131,13 +106,7 @@ Disable alarms and beeping entirely
 (setq ring-bell-function 'ignore)
 #+END_SRC
 
-Make it so that you can anser yes-no prompts with just "y" or "n"
-
-#+BEGIN_SRC emacs-lisp
-(fset 'yes-or-no-p 'y-or-n-p)
-#+END_SRC
-
-Make =Esc= quit prompts.
+Make =Esc= quit prompts. (Makes escape work like =C-g=).
 
 #+BEGIN_SRC emacs-lisp
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
@@ -150,6 +119,8 @@ Use system clipboard
 (setq mouse-yank-at-point t)
 #+END_SRC
 
+Confirm before killing emacs
+
 #+BEGIN_SRC emacs-lisp
 (setq confirm-kill-emacs 'y-or-n-p)
 #+END_SRC
@@ -160,22 +131,6 @@ Trust all themes
 (setq custom-safe-themes t)
 #+END_SRC
 
-Always use UTF-8
-
-#+BEGIN_SRC emacs-lisp
-(prefer-coding-system 'utf-8)
-(set-default-coding-systems 'utf-8)
-(set-terminal-coding-system 'utf-8)
-(set-keyboard-coding-system 'utf-8)
-(setq default-buffer-fle-coding-system 'utf-8)
-#+END_SRC
-
-Dont prompt me to kill a buffer with a process
-
-#+BEGIN_SRC emacs-lisp
-(setq confirm-kill-processes nil)
-#+END_SRC
-
 Increase undo limits
 
 #+BEGIN_SRC emacs-lisp
@@ -184,7 +139,8 @@ Increase undo limits
 (setq undo-outer-limit 1006632960)
 #+END_SRC
 
-When I do =C-x k= immediately close the current buffer, dont ask for which one to close.
+When I do =C-x k= immediately close the current buffer, dont ask for
+which one to close.
 
 #+BEGIN_SRC emacs-lisp
 (global-set-key (kbd "C-x k") 'kill-this-buffer)
@@ -196,10 +152,12 @@ Clean up trailing lines and whitespace when writing to a file
 (add-hook 'before-save-hook 'whitespace-cleanup)
 #+END_SRC
 
-Increase garbage collection threshold
+Increase garbage collection threshold (too low for modern standards)
+as well as the process reading threshold
 
 #+BEGIN_SRC emacs-lisp
 (setq gc-cons-threshold 100000000)
+(setq read-process-output-max (* 1024 1024))
 #+END_SRC
 
 Use system trash when deleting stuff
@@ -208,7 +166,7 @@ Use system trash when deleting stuff
 (setq delete-by-moving-to-trash t)
 #+END_SRC
 
-Disable word wrapping by default
+Disable line wrapping by default.
 
 #+BEGIN_SRC emacs-lisp
 (setq-default truncate-lines t)
@@ -220,27 +178,54 @@ Indicate empty lines
 (setq-default indicate-empty-lines t)
 #+END_SRC
 
+Save file positions
+
+#+BEGIN_SRC emacs-lisp
+(save-place-mode t)
+#+END_SRC
+
+** File backups
+
+Dont litter my filesystem with lockfiles and autosaves.
+
+#+BEGIN_SRC emacs-lisp
+(setq create-lockfiles nil
+      auto-save-default nil
+
+      ;; do make backups but put them in a specific directory
+      make-backup-files t
+      backup-directory-alist '(("" . "~/.emacs.d/saves")))
+#+END_SRC
+
 ** Scrolling
+
+Scrolling in emacs is kind of a mess. Nonetheles I think i have found the settings which seem to work best.
 
 #+BEGIN_SRC emacs-lisp
 (setq scroll-step 1
 
-      ; vim style keyboard scrolling
+      ;; vim style keyboard scrolling with a scrollof of 3
       scroll-margin 3
-      scroll-conservatively 9999
+      scroll-conservatively 1000
 
-      ; mouse scroll by one line and by 2 when holding shift
+      ;; mouse scroll by one line and by 2 when holding shift
       mouse-wheel-scroll-amount '(1 ((shift) . 2))
       mouse-wheel-progressive-speed nil
       mouse-wheel-follow-mouse 't
       mouse-wheel-inhibit-click-time nil
 
-      ; horizontal scrolliing for long lines
-      hscroll-step 1
-      hscroll-margin 10)
+      ;; horizontal scrolliing for long lines
+      hscroll-step 2
+      hscroll-margin 3
+
+      ;; enable scrolling horizontally with mouse
+      mouse-wheel-flip-direction nil
+      mouse-wheel-tilt-scroll nil)
 #+END_SRC
 
 ** Parens
+
+I use the =rainbow-delimiters= package to color matching parens. Also the default =electric-pair-mode= to automatically insert matching pairs and =show-paren-mode= to highlight the matching paren when the cursor is over one.
 
 #+BEGIN_SRC emacs-lisp
 (use-package rainbow-delimiters
@@ -248,44 +233,73 @@ Indicate empty lines
 
 (electric-pair-mode 1)
 (show-paren-mode 1)
-#+END_SRC
 
-#+RESULTS:
-: t
+;; Don't blink, it's too distracting.
+(setq blink-matching-paren nil)
+(setq show-paren-delay 0.0)
+(setq show-paren-highlight-openparen t)
+(setq show-paren-when-point-inside-paren t)
+
+#+END_SRC
 
 ** Line numbers
 
+Display line numbers in programming modes only.
+
 #+BEGIN_SRC emacs-lisp
-(add-hook 'prog-mode (lambda () (display-line-numbers-mode 1)))
+(add-hook 'prog-mode-hook (lambda () (display-line-numbers-mode 1)))
 #+END_SRC
 
-#+RESULTS:
-| lambda | nil | (display-line-numbers-mode 1) |
+** Prettify Symbols Mode
 
-** Conceal
+=prettify-symbols-mode= replaces all instances of certain strings with a specific character according to the association list =prettify-symbols-alist=.
+
+The global prettify symbols mode enables the mode in all buffers and re-loads the alist for each major mode (this way each mode can implement a list of symbols to replace).
 
 #+BEGIN_SRC emacs-lisp
 (global-prettify-symbols-mode 1)
 #+END_SRC
 
+** C-l to clear shells
+
+bind =C-l= to clear the screen in all shell-like modes
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'shell-mode-hook
+      (lambda () (define-key shell-mode-map (kbd "C-l") 'comint-clear-buffer)))
+
+(add-hook 'gud-mode-hook
+      (lambda () (define-key gud-mode-map (kbd "C-l") 'comint-clear-buffer)))
+
+(add-hook 'term-mode-hook
+      (lambda () (define-key term-mode-map (kbd "C-l") 'comint-clear-buffer)))
+
+(add-hook 'comint-mode-hook
+      (lambda () (define-key comint-mode-map (kbd "C-l") 'comint-clear-buffer)))
+#+END_SRC
+
+** Indentation
+
+Dont use tabs
+
+#+BEGIN_SRC emacs-lisp
+(setq-default tab-width 4
+              indent-tabs-mode nil)
+#+END_SRC
+
 * Aesthetics
 
-Doom-Nord theme is my theme of choice. Also I like using a yellow cursor (makes it easyer to find).
+Doom-Nord theme is my theme of choice.
 
 #+BEGIN_SRC emacs-lisp
 (use-package doom-themes
   :ensure t
-  :init
-  (setq doom-nord-comment-bg t)
   :config
   (load-theme 'doom-nord t)
-  (set-cursor-color "#ebcb8b"))
+  (doom-themes-org-config))
 #+END_SRC
 
-#+RESULTS:
-: t
-
-The modeline being used is Doom Modeline, taken from doom emacs.
+I use Doom modeline since it is fast enough and much nicer looking than the default.
 
 #+BEGIN_SRC emacs-lisp
 (use-package all-the-icons
@@ -298,7 +312,7 @@ The modeline being used is Doom Modeline, taken from doom emacs.
   (doom-modeline-height 25)
   (doom-modeline-icon t)
   (doom-modeline-major-mode-color-icon t)
-  (doom-modeline-buffer-file-name-style 'auto)
+  (doom-modeline-buffer-file-name-style 'truncate-from-project)
   (doom-modeline-buffer-state-icon t)
   (doom-modeline-buffer-modification-icon nil)
   (doom-modeline-minor-modes nil)
@@ -317,7 +331,7 @@ The modeline being used is Doom Modeline, taken from doom emacs.
 * Keybindings
 ** Evil mode
 
-Main vim-emulation plugin
+Evil mode provides vim emulation. This is a must-have feature for me.
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil
@@ -327,21 +341,21 @@ Main vim-emulation plugin
   (setq evil-want-keybinding nil)
   (setq evil-want-C-u-scroll t)
   (setq evil-want-C-i-jump nil)
-  (setq evil-undo-system 'undo-tree)
+  (setq evil-undo-system 'undo-fu)
   :config
-  (setq evil-echo-state nil)
   (evil-mode 1)
+  (setq evil-search-module 'evil-search)
+  (setq evil-echo-state nil)
 
-  ;; Use visual line motions
+  ;; Use visual line j/k motions
   (evil-global-set-key 'motion "j" 'evil-next-visual-line)
   (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
 
   (evil-set-initial-state 'messages-buffer-mode 'normal)
-  (evil-set-initial-state 'dashboard-mode 'normal)
-  (evil-set-initial-state 'vterm-mode 'emacs))
+  (evil-set-initial-state 'dashboard-mode 'normal))
 #+END_SRC
 
-/evilifies/ certain modes
+The =evil-collection= package overrides some default bindings to make them vim-like.
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-collection
@@ -350,7 +364,7 @@ Main vim-emulation plugin
   (evil-collection-init))
 #+END_SRC
 
-Extends evil with a clone of vim-surround
+=evil-surround= extends evil mode to include vim-surround like bindings
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-surround
@@ -359,7 +373,7 @@ Extends evil with a clone of vim-surround
   (global-evil-surround-mode 1))
 #+END_SRC
 
-Likewise vim-commentary keybinds are supported
+Likewise =evil-commentary= adds evil-commentary bindings
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-commentary
@@ -367,7 +381,7 @@ Likewise vim-commentary keybinds are supported
   (evil-commentary-mode 1))
 #+END_SRC
 
-imap jj <Esc>
+I use the =key-chord= package to map 'jj' in insert to =Esc=
 
 #+BEGIN_SRC emacs-lisp
 (use-package key-chord
@@ -377,9 +391,9 @@ imap jj <Esc>
   (key-chord-mode 1))
 #+END_SRC
 
-** Leader keys
+** General Bindings
 
-Use Space as leader key and set some bindings
+Use Space as leader key and set some bindings general purpose bindings
 
 #+BEGIN_SRC emacs-lisp
 (evil-set-leader 'normal (kbd "<SPC>"))
@@ -393,104 +407,53 @@ Use Space as leader key and set some bindings
 (evil-define-key 'normal 'global (kbd "<leader>l") 'counsel-locate)
 #+END_SRC
 
-Map =C-==, =C-+= and =C--= to control text scale
+#+RESULTS:
+
+- =C-+= and =C--= to increase and decrease the buffer text size
+- =SPC -= to toggle highlighting the current line
+- =C-v= in insert state to paste (like a traditional editor)
 
 #+BEGIN_SRC emacs-lisp
 (global-set-key (kbd "C-=") 'text-scale-increase)
 (global-set-key (kbd "C--") 'text-scale-decrease)
-(global-set-key (kbd "C-0") '-text-scale-reset)
+
+(evil-define-key 'normal 'global (kbd "<leader>-") 'hl-line-mode)
+(evil-define-key 'insert 'global (kbd "C-u") 'counsel-unicode-char)
+(evil-define-key 'insert 'global (kbd "C-v") 'evil-paste-before)
 #+END_SRC
 
-* Dired
+* Installed Packages
+** Ivy, Counsel and Swiper
 
-#+BEGIN_SRC emacs-lisp
-(use-package dired
-  :ensure nil
-  :commands (dired dired-jump)
-  :bind (("C-x C-j" . dired-jump))
-  :custom ((dired-listing-switches "-agho --group-directories-first"))
-  :config
-  (setq dired-recursive-copies (quote always))
-  (setq dired-recursive-deletes (quote top)))
-#+END_SRC
-
-Dired single allows me to move through directories without creating whole new buffers, I bind =h= and =l= in evil normal mode to move up and down directories.
-
-#+BEGIN_SRC emacs-lisp
-(use-package dired-single)
-
-(evil-collection-define-key 'normal 'dired-mode-map
-   "h" 'dired-single-up-directory
-   "l" 'dired-single-buffer)
-#+END_SRC
-
-Hide dotfiles and details by default.
-
-#+BEGIN_SRC emacs-lisp
-(use-package dired-hide-dotfiles
-  :hook (dired-mode . dired-hide-dotfiles-mode)
-  :config
-  (evil-collection-define-key 'normal 'dired-mode-map
-    "." 'dired-hide-dotfiles-mode))
-
-(defun rom/dired-mode-setup ()
-  (dired-hide-details-mode 1))
-
-(add-hook 'dired-mode-hook 'rom/dired-mode-setup)
-#+END_SRC
-
-Use icons in dired.
-
-#+BEGIN_SRC emacs-lisp
-(use-package all-the-icons-dired
-  :after all-the-icons
-  :hook (dired-mode . all-the-icons-dired-mode))
-#+END_SRC
-
-Auto-reload dired
-
-#+BEGIN_SRC emacs-lisp
-(add-hook 'dired-mode-hook 'auto-revert-mode)
-#+END_SRC
-
-Dired peep allows you to preview a file without having to open it. Supports images.
-
-#+BEGIN_SRC emacs-lisp
-(use-package peep-dired
-  :ensure t
-  :config
-  (evil-collection-define-key 'normal 'dired-mode-map "P" 'peep-dired))
-#+END_SRC
-
-* Ivy, Counsel and Swiper
-
-Use IVY to autocomplete buffers, file search, etc.
+I use IVY to intelligently show suggestions for all minibuffer
+commands
 
 #+BEGIN_SRC emacs-lisp
 (use-package ivy
   :diminish
   :bind (("C-s" . swiper)
-	 :map ivy-minibuffer-map
-	 ("TAB" . ivy-alt-done)
-	 ("C-l" . ivy-alt-done)
-	 ("C-j" . ivy-next-line)
-	 ("C-k" . ivy-previous-line)
-	 ("C-d" . ivy-kill-line)
-	 :map ivy-switch-buffer-map
-	 ("C-k" . ivy-previous-line)
-	 ("C-l" . ivy-done)
-	 ("C-d" . ivy-switch-buffer-kill)
-	 ("C-o" . ivy-switch-buffer-other-window)
-	 :map ivy-reverse-i-search-map
-	 ("C-k" . ivy-previous-line)
-	 ("C-d" . ivy-reverse-i-search-kill))
+         :map ivy-minibuffer-map
+         ("TAB" . ivy-alt-done)
+         ("C-l" . ivy-alt-done)
+         ("C-j" . ivy-next-line)
+         ("C-k" . ivy-previous-line)
+         ("C-d" . ivy-kill-line)
+         :map ivy-switch-buffer-map
+         ("C-k" . ivy-previous-line)
+         ("C-l" . ivy-done)
+         ("C-d" . ivy-switch-buffer-kill)
+         ("C-o" . ivy-switch-buffer-other-window)
+         :map ivy-reverse-i-search-map
+         ("C-k" . ivy-previous-line)
+         ("C-d" . ivy-reverse-i-search-kill))
   :config
-  (setq ivy-use-virtual-buffers t)
-  (setq enable-recursive-minibuffers t)
+  (setq ivy-use-virtual-buffers nil)
+  (setq enable-recursive-minibuffers nil)
   (ivy-mode 1))
 #+END_SRC
 
-Ivy-rich adds some extra columns to some counsel commands to provide more information about them.
+Ivy-rich adds some extra columns to ivy to provide more information
+(docstring, binding, ...).
 
 #+BEGIN_SRC emacs-lisp
 (use-package ivy-rich
@@ -499,100 +462,100 @@ Ivy-rich adds some extra columns to some counsel commands to provide more inform
   (ivy-rich-mode 1))
 #+END_SRC
 
-Counsel provides replacements to some command such as =find-file= and =switch-buffer= and so on.
+Counsel provides replacements to some command such as =find-file= and
+=switch-buffer= and so on which integrate nicely with ivy.
 
 #+BEGIN_SRC emacs-lisp
 (use-package counsel
   :diminish
-  :custom
-  (counsel-linux-app-format-function #'counsel-linux-app-format-function-name-only)
   :config
+  (setq counsel-switch-buffer-preview-virtual-buffers nil)
   (counsel-mode 1))
 #+END_SRC
 
-* Company
+** Company
 
-Company mode provides a general purpose code completion system which is used by LSP, and other backends.
+Company mode provides a general purpose code completion interface
+which can be used by LSP and other backends.
 
 #+BEGIN_SRC emacs-lisp
 (use-package company
   :ensure t
   :init
+  ;; enable company in programming modes
   (add-hook 'prog-mode-hook 'company-mode)
   :config
   (setq company-idle-delay 0)
   (setq company-minimum-prefix-length 1)
-  (company-tng-configure-default))
+
+  ;; use standard bindings
+  (company-tng-configure-default)
+  (define-key company-mode-map (kbd "C-SPC") 'company-complete)
+
+  (define-key company-search-map (kbd "C-j") 'company-select-next)
+  (define-key company-search-map (kbd "C-k") 'company-select-previous))
 #+END_SRC
 
-* LSP mode
+#+RESULTS:
+: t
 
-LSP mode provides a language-server protocol implementation which gives provides intelligent syntax checking and code completion.
+** LSP mode
+
+LSP mode provides a language-server protocol implementation which
+provides intelligent syntax checking and code completion for more or
+less every programming language.
 
 #+BEGIN_SRC emacs-lisp
 (use-package lsp-mode
   :init
   (setq lsp-keymap-prefix "C-c C-l")
-  :hook (
-     (c-mode . lsp)
-     (python-mode . lsp)
-     (java-mode . lsp))
+  :hook ((c-mode . lsp)
+         (python-mode . lsp)
+         (LaTeX-mode . lsp))
   :commands lsp)
 
 (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
 #+END_SRC
 
-LSP ui adds visual ui to LSP mode.
+LSP-UI adds a visual ui to LSP mode. I disable most settings but keep
+the ones that are useful to me.
 
  #+BEGIN_SRC emacs-lisp
-(use-package lsp-ui
-  :init
-  (setq lsp-headerline-breadcrumb-enable nil)
-  (setq lsp-lens-enable nil)
-  (setq lsp-signature-render-documentation nil)
-  (setq lsp-ui-doc-enable nil)
-  :config
-  (evil-collection-define-key 'normal 'lsp-ui-mode-map "K" 'lsp-ui-doc-glance))
+ (use-package lsp-ui
+   :init
+   (setq lsp-enable-symbol-highlighting t) ; disable symbol highlighting
+   (setq lsp-headerline-breadcrumb-enable nil) ; disable headerline
+   (setq lsp-lens-enable nil) ; disable lenses
+   (setq lsp-signature-render-documentation nil) ; disable doc in sighature help
+   (setq lsp-ui-doc-enable nil) ; dont auto show documentation
+   :config
+   (evil-collection-define-key 'normal 'lsp-ui-mode-map "K" 'lsp-ui-doc-glance)
+   (evil-collection-define-key 'normal 'lsp-ui-mode-map "<leader>t" 'lsp-ui-doc-glance)
+   (define-key lsp-ui-mode-map (kbd "C-p") 'lsp-signature-activate)
+   )
 #+END_SRC
 
-* Comint
+** Projectile
 
-bind =C-l= to clear the screen in all shell-like modes
+Projectile provides a lot of commands for interacting with projects, such as:
 
-#+BEGIN_SRC emacs-lisp
-(add-hook 'shell-mode-hook
-	  (lambda () (define-key shell-mode-map "\C-l" 'comint-clear-buffer)))
-
-(add-hook 'gud-mode-hook
-	  (lambda () (define-key gud-mode-map "\C-l" 'comint-clear-buffer)))
-
-(add-hook 'term-mode-hook
-	  (lambda () (define-key term-mode-map "\C-l" 'comint-clear-buffer)))
-
-(add-hook 'comint-mode-hook
-	  (lambda () (define-key comint-mode-map "\C-l" 'comint-clear-buffer)))
-#+END_SRC
-
-* Projectile
+- finding a file within a project
+- compiling/running the project
+- opening dired in the project root
 
 #+BEGIN_SRC emacs-lisp
 (use-package projectile
   :ensure t
   :init
-  (projectile-mode +1)
-  :bind (:map projectile-mode-map ("C-c p" . projectile-command-map)))
+  (projectile-mode 1)
+  :bind (:map projectile-mode-map
+              ("C-c p" . projectile-command-map)))
 #+END_SRC
-
-* Other packages
-** Vterm
-
- #+BEGIN_SRC emacs-lisp
- (use-package vterm)
- #+END_SRC
 
 ** Helpful
 
-Replace standard help commands with more helpful alternatives.
+Helpful replaces the standard help commands with more helpful
+alternatives.
 
 #+BEGIN_SRC emacs-lisp
 (use-package helpful
@@ -607,54 +570,411 @@ Replace standard help commands with more helpful alternatives.
   ([remap describe-key] . helpful-key))
 #+END_SRC
 
-** Undo-tree
+** Undo-fu
 
-Nicer undo package
+Provides a standard undo system. I used to use undo-tree but this is
+faster and I never really used the visualization features.
 
 #+BEGIN_SRC emacs-lisp
-(use-package undo-tree
-  :ensure t
-  :init
-  (global-undo-tree-mode))
+(use-package undo-fu)
 #+END_SRC
 
 ** Highlight TODO
 
+Highlighs TODO, FIXME, KLUDGE and other similar strings in code
+comments
+
 #+BEGIN_SRC emacs-lisp
 (use-package hl-todo
-       :ensure t
-       :custom-face
-       (hl-todo ((t (:inherit hl-todo :italic t))))
-       :hook ((prog-mode . hl-todo-mode)
-	      (yaml-mode . hl-todo-mode)))
+  :custom-face
+  (hl-todo ((t (:inherit hl-todo :italic t))))
+  :hook ((prog-mode . hl-todo-mode)
+         (yaml-mode . hl-todo-mode)))
 #+END_SRC
 
 ** Treesitter
 
-Treesitter gives enhanced syntax-based font-locking.
+Treesitter gives enhanced code highlighting based on the syntax tree
+rather than regex matches.
 
 #+BEGIN_SRC emacs-lisp
 (use-package tree-sitter)
-
 (use-package tree-sitter-langs)
 
 (global-tree-sitter-mode)
 (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
 #+END_SRC
 
+** Origami
+
+=origami-mode= allows you to fold sections of code. I use the bindings
+provided by evil mode
+
+#+BEGIN_SRC emacs-lisp
+(use-package origami
+  :config
+  (global-origami-mode 1)
+  (push '(scala-mode . origami-c-style-parser) origami-parser-alist)
+  (push '(java-mode . origami-c-style-parser) origami-parser-alist)
+  (push '(kotlin-mode . origami-c-style-parser) origami-parser-alist))
+#+END_SRC
+
+** Beacon
+
+Beacon mode simply "illuminates" the point in certain situations to
+make it simpler to find.
+
+#+BEGIN_SRC emacs-lisp
+(use-package beacon
+  :config
+  (setq beacon-blink-when-window-scrolls nil)
+  (setq beacon-blink-when-buffer-changes t)
+  (setq beacon-blink-when-window-changes t)
+  (beacon-mode 1))
+#+END_SRC
+
+** Neotree
+
+#+BEGIN_SRC emacs-lisp
+(use-package neotree
+  :config
+  (setq neo-window-fixed-size nil)
+  (setq neo-theme (if (display-graphic-p)
+                      'icons
+                    'arrow)))
+#+END_SRC
+
+** Flyspell
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'org-mode 'flyspell-mode)
+
+;; https://stackoverflow.com/a/22116480/14599964
+(defun rom/save-word ()
+  (interactive)
+  (let ((current-location (point))
+        (word (flyspell-get-word)))
+    (when (consp word)
+      (flyspell-do-correct 'save nil
+                           (car word)
+                           current-location
+                           (cadr word)
+                           (caddr word)
+                           current-location))))
+
+(evil-define-key 'normal 'flyspell-mode (kbd "zg") 'rom/save-word)
+#+END_SRC
+
+** Magit
+
+#+BEGIN_SRC emacs-lisp
+(use-package magit)
+#+END_SRC
+
+** Visual fill collumn
+
+#+BEGIN_SRC emacs-lisp
+(use-package visual-fill-column
+  :config
+
+  ;; set default visual-fill-column mode settings in this hook
+  (add-hook 'visual-fill-column-mode-hook (lambda ()
+                                            (setq visual-fill-column-width 120
+                                                  visual-fill-column-center-text t))))
+#+END_SRC
+
+#+RESULTS:
+: t
+
+** DAP mode
+
+#+BEGIN_SRC emacs-lisp
+(use-package dap-mode)
+#+END_SRC
+
+** Projectile
+
+Projectile provides a lot of commands for interacting with projects, such as:
+
+- finding a file within a project
+- compiling/running the project
+- opening dired in the project root
+
+#+BEGIN_SRC emacs-lisp
+(use-package projectile
+  :ensure t
+  :init
+  (projectile-mode 1)
+  :bind (:map projectile-mode-map
+              ("C-c p" . projectile-command-map)))
+#+END_SRC
+
+** Helpful
+
+Helpful replaces the standard help commands with more helpful
+alternatives.
+
+#+BEGIN_SRC emacs-lisp
+(use-package helpful
+  :commands (helpful-callable helpful-variable helpful-command helpful-key)
+  :custom
+  (counsel-describe-function-function #'helpful-callable)
+  (counsel-describe-variable-function #'helpful-variable)
+  :bind
+  ([remap describe-function] . counsel-describe-function)
+  ([remap describe-command] . helpful-command)
+  ([remap describe-variable] . counsel-describe-variable)
+  ([remap describe-key] . helpful-key))
+#+END_SRC
+
+** Undo-fu
+
+Provides a standard undo system. I used to use undo-tree but this is
+faster and I never really used the visualization features.
+
+#+BEGIN_SRC emacs-lisp
+(use-package undo-fu)
+#+END_SRC
+
+** Highlight TODO
+
+Highlighs TODO, FIXME, KLUDGE and other similar strings in code
+comments
+
+#+BEGIN_SRC emacs-lisp
+(use-package hl-todo
+  :custom-face
+  (hl-todo ((t (:inherit hl-todo :italic t))))
+  :hook ((prog-mode . hl-todo-mode)
+         (yaml-mode . hl-todo-mode)))
+#+END_SRC
+
+** Treesitter
+
+Treesitter gives enhanced code highlighting based on the syntax tree
+rather than regex matches.
+
+#+BEGIN_SRC emacs-lisp
+(use-package tree-sitter)
+(use-package tree-sitter-langs)
+
+(global-tree-sitter-mode)
+(add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
+#+END_SRC
+
+** Origami
+
+=origami-mode= allows you to fold sections of code. I use the bindings
+provided by evil mode
+
+#+BEGIN_SRC emacs-lisp
+(use-package origami
+  :config
+  (global-origami-mode 1)
+  (push '(scala-mode . origami-c-style-parser) origami-parser-alist)
+  (push '(java-mode . origami-c-style-parser) origami-parser-alist)
+  (push '(kotlin-mode . origami-c-style-parser) origami-parser-alist))
+#+END_SRC
+
+** Beacon
+
+Beacon mode simply "illuminates" the point in certain situations to
+make it simpler to find.
+
+#+BEGIN_SRC emacs-lisp
+(use-package beacon
+  :config
+  (setq beacon-blink-when-window-scrolls nil)
+  (setq beacon-blink-when-buffer-changes t)
+  (setq beacon-blink-when-window-changes t)
+  (beacon-mode 1))
+#+END_SRC
+
+** Neotree
+
+#+BEGIN_SRC emacs-lisp
+(use-package neotree
+  :config
+  (setq neo-window-fixed-size nil)
+  (setq neo-theme (if (display-graphic-p)
+                      'icons
+                    'arrow)))
+#+END_SRC
+
+** Flyspell
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'org-mode 'flyspell-mode)
+
+;; https://stackoverflow.com/a/22116480/14599964
+(defun rom/save-word ()
+  (interactive)
+  (let ((current-location (point))
+        (word (flyspell-get-word)))
+    (when (consp word)
+      (flyspell-do-correct 'save nil
+                           (car word)
+                           current-location
+                           (cadr word)
+                           (caddr word)
+                           current-location))))
+
+(evil-define-key 'normal 'flyspell-mode (kbd "zg") 'rom/save-word)
+#+END_SRC
+
+** Magit
+
+#+BEGIN_SRC emacs-lisp
+(use-package magit)
+#+END_SRC
+
+** Visual fill collumn
+
+#+BEGIN_SRC emacs-lisp
+(use-package visual-fill-column
+  :config
+
+  ;; set default visual-fill-column mode settings in this hook
+  (add-hook 'visual-fill-column-mode-hook (lambda ()
+                                            (setq visual-fill-column-width 120
+                                                  visual-fill-column-center-text t))))
+#+END_SRC
+
+#+RESULTS:
+: t
+
+* Builtin Packages
+** Dired
+
+Dired is emacs's built in file manager.
+
+#+BEGIN_SRC emacs-lisp
+(use-package dired
+  :ensure nil
+  :commands (dired dired-jump)
+  :custom ((dired-listing-switches "-agho --group-directories-first"))
+  :hook (dired-mode . dired-omit-mode)
+  :hook (dired-mode . dired-hide-details-mode)
+  :config
+  (setq dired-recursive-copies 'always)
+  (setq dired-recursive-deletes 'top)
+  (evil-collection-define-key 'normal 'dired-mode-map
+    "h" 'dired-up-directory
+    "l" 'dired-find-file))
+#+END_SRC
+
+Hide dotfiles and details by default, toggle them with '.'
+
+#+BEGIN_SRC emacs-lisp
+(use-package dired-hide-dotfiles
+  :hook (dired-mode . dired-hide-dotfiles-mode)
+  :config
+  ;; toggle hidden dotfiles with "."
+  (evil-collection-define-key 'normal 'dired-mode-map
+    "." 'dired-hide-dotfiles-mode))
+#+END_SRC
+
+Use icons in dired.
+
+#+BEGIN_SRC emacs-lisp
+(use-package all-the-icons-dired
+  :after all-the-icons
+  :hook (dired-mode . all-the-icons-dired-mode))
+#+END_SRC
+
+Open files with specific extensions with specific programs. For
+example I want all pngs to open with the gnome image viewer.
+
+#+BEGIN_SRC emacs-lisp
+(use-package dired-open
+  :config
+  (setq dired-open-extensions '(("png" . "eog")
+                                ("jpg" . "eog")
+                                ("svg" . "eog")
+                                ("gif" . "eog")
+                                ("mkv" . "mpv")
+                                ("mp4" . "mpv")
+                                ("pdf" . "evince"))))
+#+END_SRC
+
+Auto reload dired when a file/directory is added/deleted externally
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'dired-mode-hook 'auto-revert-mode)
+#+END_SRC
+
+** Tab bar mode
+
+Tab bar mode provides very basic "workspace" functionality to emacs
+
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'tab-bar-tab nil
+                    :background "#88c0d0"
+                    :foreground "#2e3440"
+                    :weight 'bold)
+
+(set-face-attribute 'tab-bar-tab-inactive nil
+                    :background "#4c566a")
+
+(set-face-attribute 'tab-bar nil
+                    :background "#4c566a")
+
+(setq tab-bar-button-margin 4
+      tab-bar-close-button-show nil
+      tab-bar-new-button-show nil
+      tab-bar-show nil)
+#+END_SRC
+
 ** Recentf
 
-Makes it easy to open recent files
+Recentf is a built in package that keeps track of recently edited files
 
 #+BEGIN_SRC emacs-lisp
 (use-package recentf
+  :defer 10
   :config
   (setq recentf-max-saved-items 50)
   (setq recentf-auto-cleanup 'never)
   (recentf-mode t))
 #+END_SRC
 
+** Bookmarks
+
+Save bookmarks file whenever a bookmark action takes place.
+
+#+BEGIN_SRC emacs-lisp
+(setq bookmark-save-flag 1)
+#+END_SRC
+
+** Winner
+
+Winner mode is a built in minor mode that allows you to undo and redo
+changes in the window configuration.
+
+#+BEGIN_SRC emacs-lisp
+(winner-mode 1)
+(define-key winner-mode-map (kbd "H-<left>") 'winner-undo)
+(define-key winner-mode-map (kbd "H-<right>") 'winner-redo)
+#+END_SRC
+
+** Uniquify
+
+The built in package uniquify allows you to modify what should happen
+when you have buffers with the same name. I simply also include the
+directory name separated by a ":".
+
+#+BEGIN_SRC emacs-lisp
+(use-package uniquify
+  :ensure nil
+  :config
+  (setq uniquify-buffer-name-style 'post-forward
+    uniquify-separator ":"))
+#+END_SRC
+
 ** TRAMP
+
+Tramp allows you to edit files using a protocol from within emacs. I
+use it mostly to edit files on remote machines.
 
 #+BEGIN_SRC emacs-lisp
 (use-package tramp
@@ -662,65 +982,40 @@ Makes it easy to open recent files
   (setq tramp-default-method "ssh"))
 #+END_SRC
 
-** ** Origami
-
-#+BEGIN_SRC emacs-lisp
-(use-package origami
-  :config
-  (global-origami-mode 1)
-  (push '(scala-mode . origami-c-style-parser) origami-parser-alist))
-#+END_SRC
-
-#+RESULTS:
-: t
-
-** Zoom window
-
-#+BEGIN_SRC emacs-lisp
-(use-package zoom-window
-  :config
-  (setq zoom-window-mode-line-color "black"))
-
-(global-set-key (kbd "M-z") 'zoom-window-zoom)
-#+END_SRC
-
-#+RESULTS:
-: zoom-window-zoom
-
-** Crux
-
-Crux is: a Collection of Ridiculously Useful eXtensions.
-
-#+BEGIN_SRC emacs-lisp
-(use-package crux)
-#+END_SRC
-
-* Filetypes
+* Major modes
 ** Scala
 
 #+BEGIN_SRC emacs-lisp
+(defun rom/send-to-scala ()
+  ;; Send the entire buffer to the *scala* comint buffer unless we make a selection
+  (interactive)
+  (if (region-active-p)
+      (comint-send-region "*scala*" (region-beginning) (region-end))
+    (comint-send-region "*scala*" (point-min) (point-max))))
+
 (use-package scala-mode
   :interpreter
-    ("scala" . scala-mode))
+  ("scala" . scala-mode)
+  :config
+  (define-key scala-mode-map (kbd "C-c C-c") rom/send-to-scala))
 #+END_SRC
 
-** Haskell
+** Kotlin
 
 #+BEGIN_SRC emacs-lisp
-(use-package haskell-mode)
+(use-package kotlin-mode)
 #+END_SRC
 
 ** Markdown
 
 #+BEGIN_SRC emacs-lisp
-(use-package markdown-mode
-  :ensure t)
+(use-package markdown-mode)
 #+END_SRC
 
-*** Center markdown buffers
+Center markdown buffers
 
 #+BEGIN_SRC emacs-lisp
-(add-hook 'markdown-mode-hook 'rom/goyo)
+(add-hook 'markdown-mode-hook 'visual-line-mode)
 #+END_SRC
 
 ** Python
@@ -730,161 +1025,270 @@ Crux is: a Collection of Ridiculously Useful eXtensions.
       python-shell-interpreter-args "-i --simple-prompt --InteractiveShell.display_page=True")
 #+END_SRC
 
-** vimscript
-
-#+BEGIN_SRC emacs-lisp
-(use-package vimrc-mode)
-#+END_SRC
-
 ** Org Mode
 
- #+BEGIN_SRC emacs-lisp
- (use-package org
-   :config
-   (setq org-ellipsis " ▾"
-	 org-hide-emphasis-markers t
-	 org-edit-src-content-indentation 0
-	 org-highlight-latex-and-related '(latex)
-	 org-format-latex-options (plist-put org-format-latex-options :scale 1.50))
-)
+#+BEGIN_SRC emacs-lisp
+(use-package org
+  :config
+  (setq org-ellipsis " ▾"
+        org-hide-emphasis-markers t
+        org-edit-src-content-indentation 0
+        org-highlight-latex-and-related '(latex)
+        org-format-latex-options (plist-put org-format-latex-options :scale 1.50)
+        org-indent-mode-turns-on-hiding-stars nil))
+#+END_SRC
+
+The =rom/org-mode-setup= function configures some org mode settings and runs when I enter an org buffer.
+
+#+BEGIN_SRC emacs-lisp
+(defun rom/org-mode-setup ()
+
+  ;; header faces
+  (set-face-attribute 'org-level-1 nil :weight 'bold :height 1.0)
+  (set-face-attribute 'org-level-2 nil :weight 'bold :height 1.0)
+  (set-face-attribute 'org-level-3 nil :weight 'bold :height 1.0)
+  (set-face-attribute 'org-level-4 nil :weight 'bold :height 1.0)
+  (set-face-attribute 'org-level-5 nil :weight 'bold :height 1.0)
+  (set-face-attribute 'org-level-6 nil :weight 'bold :height 1.0)
+  (set-face-attribute 'org-level-7 nil :weight 'bold :height 1.0)
+  (set-face-attribute 'org-level-8 nil :weight 'bold :height 1.0)
+
+  ;; TODO and DONE faces
+  (set-face-attribute 'org-done nil :weight 'bold :height 1.0 :slant 'normal)
+  (set-face-attribute 'org-headline-done nil :weight 'bold :height 1.0)
+  (set-face-attribute 'org-todo nil :weight 'bold :height 1.0 :slant 'normal)
+
+  ;; custom prettify symbols alist
+  (push '("#+TITLE: "        . "") prettify-symbols-alist)
+  (push '("#+SUBTITLE: "     . "") prettify-symbols-alist)
+  (push '("#+AUTHOR: "       . "-") prettify-symbols-alist)
+  (push '(":PROPERTIES:"     . ":") prettify-symbols-alist)
+  (push '("#+PROPERTY:"      . ":") prettify-symbols-alist)
+  (push '("#+BEGIN_SRC"      . "λ") prettify-symbols-alist)
+  (push '("#+END_SRC"        . "-") prettify-symbols-alist)
+  (push '("#+RESULTS:"       . "»") prettify-symbols-alist)
+  (push '(":end:"            . "-") prettify-symbols-alist)
+  (push '(":results:"        . "-") prettify-symbols-alist)
+  (push '("#+NAME:"          . "-") prettify-symbols-alist)
+  (push '("#+BEGIN_EXAMPLE"  . "~") prettify-symbols-alist)
+  (push '("#+END_EXAMPLE"    . "~") prettify-symbols-alist)
+  (push '("#+BEGIN_VERBATIM" . "") prettify-symbols-alist)
+  (push '("#+END_VERBATIM"   . "") prettify-symbols-alist)
+  (push '("#+BEGIN_VERSE"    . "") prettify-symbols-alist)
+  (push '("#+END_VERSE"      . "") prettify-symbols-alist)
+  (push '("#+BEGIN_QUOTE"    . "") prettify-symbols-alist)
+  (push '("#+END_QUOTE"      . "") prettify-symbols-alist)
+  (push '("#+TBFLM:"         . "∫") prettify-symbols-alist)
+  (push '("[X]"              . (?\[ (Br . Bl) ?✓ (Br . Bl) ?\])) prettify-symbols-alist)
+  (push '("\\\\"             . "↩") prettify-symbols-alist)
+
+  (visual-line-mode 1)
+  (org-indent-mode 1))
+
+(add-hook 'org-mode-hook 'rom/org-mode-setup)
  #+END_SRC
 
  #+RESULTS:
- : t
+ | rom/org-mode-setup | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-show-all append local] 5] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-babel-show-result-all append local] 5] | org-babel-result-hide-spec | org-babel-hide-all-hashes | #[0 \301\211\207 [imenu-create-index-function org-imenu-get-tree] 2] |
 
-*** Org mode faces
-
- #+BEGIN_SRC emacs-lisp
- (defun rom/org-mode-faces ()
-
-   ;; word wrap
-   (visual-line-mode 1)
-
-   ;; Set heading face sizes
-   (dolist (face '((org-level-1 . 1.4)
-		   (org-level-2 . 1.3)
-		   (org-level-3 . 1.2)
-		   (org-level-4 . 1.1)
-		   (org-level-5 . 1.1)
-		   (org-level-6 . 1.1)
-		   (org-level-7 . 1.1)
-		   (org-level-8 . 1.1)))
-       (set-face-attribute (car face) nil :weight 'bold :height (cdr face))))
-
- (add-hook 'org-mode-hook 'rom/org-mode-faces)
- #+END_SRC
-
-*** Center org buffers
-
- #+BEGIN_SRC emacs-lisp
- (add-hook 'org-mode-hook 'rom/goyo)
- #+END_SRC
-
-*** Prettify-symbols
-
- Overrride =prettify-symbols-alist= and enable the mode whenever in org mode.
-
- #+BEGIN_SRC emacs-lisp
- (defun rom/org-pretty-symbols ()
-     (push '("#+TITLE: "        . "") prettify-symbols-alist)
-     (push '("#+SUBTITLE: "     . "") prettify-symbols-alist)
-     (push '("* "               . "") prettify-symbols-alist)
-     (push '("** "              . "") prettify-symbols-alist)
-     (push '("*** "             . "") prettify-symbols-alist)
-     (push '("**** "            . "") prettify-symbols-alist)
-     (push '("***** "           . "") prettify-symbols-alist)
-     (push '("#+AUTHOR: "       . "- ") prettify-symbols-alist)
-     (push '(":PROPERTIES:"     . ":") prettify-symbols-alist)
-     (push '("#+PROPERTY:"      . ":") prettify-symbols-alist)
-     (push '("#+BEGIN_SRC"      . "λ") prettify-symbols-alist)
-     (push '("#+END_SRC"        . "-") prettify-symbols-alist)
-     (push '("#+RESULTS:"       . "»") prettify-symbols-alist)
-     (push '(":end:"            . "-") prettify-symbols-alist)
-     (push '(":results:"        . "-") prettify-symbols-alist)
-     (push '("#+NAME:"          . "-") prettify-symbols-alist)
-     (push '("#+BEGIN_EXAMPLE"  . "~") prettify-symbols-alist)
-     (push '("#+END_EXAMPLE"    . "~") prettify-symbols-alist)
-     (push '("#+BEGIN_VERBATIM" . "") prettify-symbols-alist)
-     (push '("#+END_VERBATIM"   . "") prettify-symbols-alist)
-     (push '("#+BEGIN_VERSE"    . "") prettify-symbols-alist)
-     (push '("#+END_VERSE"      . "") prettify-symbols-alist)
-     (push '("#+BEGIN_QUOTE"    . "") prettify-symbols-alist)
-     (push '("#+END_QUOTE"      . "") prettify-symbols-alist)
-     (push '("#+TBFLM:"         . "∫") prettify-symbols-alist)
-     (push '("[X]"              . (?\[ (Br . Bl) ?✓ (Br . Bl) ?\])) prettify-symbols-alist)
-     (push '("\\\\"             . "↩") prettify-symbols-alist)
-     (prettify-symbols-mode t))
-
- (add-hook 'org-mode-hook 'rom/org-pretty-symbols)
- #+END_SRC
-
-* * Buffer Managment
-** Bufler
+*** Org Agenda
 
 #+BEGIN_SRC emacs-lisp
-(use-package bufler)
-(bufler-mode 1)
+(setq org-agenda-files '("~/gtd/inbox.org"
+                         "~/gtd/gtd.org"
+                         "~/gtd/tickler.org")
 
-(global-set-key (kbd "<menu>") 'bufler-list)
+      org-todo-keywords '((sequence "TODO" "WAITING" "|" "DONE"))
 
-(evil-define-key 'normal 'global (kbd "<leader>b") 'bufler-switch-buffer)
+      org-capture-templates '(("t" "Todo [inbox]" entry
+                               (file+headline "~/gtd/inbox.org" "Tasks")
+                               "* TODO %i%?")
+                              ("T" "Tickler" entry
+                               (file+headline "~/gtd/tickler.org" "Tickler")
+                               "* %i%? \n %U"))
 
-(evil-define-key 'normal bufler-list-mode-map (kbd "d") 'bufler-list-buffer-kill)
-(evil-define-key 'normal bufler-list-mode-map (kbd "w") 'bufler-list-buffer-save)
-(evil-define-key 'normal bufler-list-mode-map (kbd "F") 'bufler-list-group-make-frame)
-(evil-define-key 'normal bufler-list-mode-map (kbd "f") 'bufler-list-group-frame)
-(evil-define-key 'normal bufler-list-mode-map (kbd "<RET>") 'bufler-list-buffer-switch)
+      org-refile-targets '(("/home/jorge/gtd/gtd.org" :maxlevel . 3)
+                           ("/home/jorge/gtd/someday.org" :level . 1)
+                           ("/home/jorge/gtd/tickler.org" :maxlevel . 2)))
+
+(evil-define-key 'normal 'global (kbd "<leader>a") 'org-agenda)
+(evil-define-key 'normal 'global (kbd "<leader>c") 'org-capture)
+#+END_SRC
+
+*** Org Cliplink
+
+#+BEGIN_SRC emacs-lisp
+(use-package org-cliplink)
+#+END_SRC
+
+** YAML mode
+
+#+BEGIN_SRC emacs-lisp
+(use-package yaml-mode)
+#+END_SRC
+
+** LaTeX
+
+Center =LaTeX= buffers and enable rainbow delimiters.
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'LaTeX-mode-hook 'rom/goyo)
+(add-hook 'LaTeX-mode-hook 'rainbow-delimiters-mode)
+#+END_SRC
+
+* Functions and Aliases
+** Functions
+
+A collection of simple functions that arent used often enough to
+deserve a keybinding but still handy to have available.
+
+#+BEGIN_SRC emacs-lisp
+; source: https://stackoverflow.com/questions/1242352/get-font-face-under-cursor-in-emacs
+(defun what-face (pos)
+  (interactive "d")
+  (let ((face (or (get-char-property (point) 'read-face-name)
+                  (get-char-property (point) 'face))))
+    (if face (message "Face: %s" face) (message "No face at %d" pos))))
+#+END_SRC
+
+** Aliases
+
+I use aliases for M-x commands which I use frequently, but not so
+frequently that mapping it to an obscure key combination makes sense.
+
+#+BEGIN_SRC emacs-lisp
+; minor modes
+(defalias 'ln 'display-line-numbers-mode)
+(defalias 'conceal 'prettify-symbols-mode)
+(defalias 'cmp 'company-mode)
+(defalias 'tshl 'tree-sitter-hl-mode)
+(defalias 'tb 'tab-bar-mode)
+
+; buffer actions
+(defalias 'rb 'revert-buffer)
+(defalias 'regex 'replace-regexp)
+(defalias 'iregex 'query-replace-regexp)
+
+; general
+(defalias 'bks 'bookmark-set)
+(defalias 'bkd 'bookmark-delete)
+(defalias 'bkl 'list-bookmarks)
+(defalias 'lt 'counsel-load-theme)
+(defalias 'nt 'neotree-toggle)
+
+(defalias 'scroll 'scroll-bar-mode)
+
+(defalias 'ipy 'run-python)
+
+(defalias 'rename 'crux-rename-file-and-buffer)
+(defalias 'errors 'flycheck-list-errors)
+#+END_SRC
+
+* Buffer and Window Managment
+** Switch buffer
+
+The functiom =rom/switch-buff= calls =counsel-switch-buffer= but excludes
+buffers that match certain regexps.
+
+#+BEGIN_SRC emacs-lisp
+(defun rom/switch-buff ()
+  (interactive)
+  (let ((ivy-ignore-buffers '("*help"
+                              "*Messages*"
+                              "*Warnings*"
+                              "*lsp-log*"
+                              "*Minibuff"
+                              "*Calendar"
+                              "*Org Agenda"
+                              "*Backtrace"
+                              "*Buffer List"
+                              "*RE-Builder"
+                              "*Bufler"
+                              "*pyls"
+                              "*Compile-log"
+                              "magit-process"
+                              "magit-diff"
+                              "*ediff-"
+                              "*Ediff Registry"
+                              "*clangd")))
+
+    (call-interactively 'counsel-switch-buffer)))
+
+(evil-define-key 'normal 'global (kbd "<leader><SPC>") 'rom/switch-buff)
 #+END_SRC
 
 #+RESULTS:
-** Ace window
+
+** Window navigation
+
+I use the hyper key for all window navigation commands. My keyboard
+doesnt actually have a hyper key but what I do is bind caps lock to
+control and control to hyper. Doing this deletes caps lock but is more
+than worth it for me.
 
 #+BEGIN_SRC emacs-lisp
 (use-package windmove
   :config
-  (global-set-key (kbd "H-h")  'windmove-left)
+  (global-set-key (kbd "H-h") 'windmove-left)
   (global-set-key (kbd "H-l") 'windmove-right)
-  (global-set-key (kbd "H-k")    'windmove-up)
-  (global-set-key (kbd "H-j")  'windmove-down)
+  (global-set-key (kbd "H-k") 'windmove-up)
+  (global-set-key (kbd "H-j") 'windmove-down))
+
+  (global-set-key (kbd "H-s") 'evil-window-split)
+  (global-set-key (kbd "H-v") 'evil-window-vsplit)
 
   (global-set-key (kbd "H-c")  'delete-window)
-
-)
+  (global-set-key (kbd "H-<up>") 'maximize-window)
+  (global-set-key (kbd "H-<down>") 'minimize-window)
 #+END_SRC
 
-#+RESULTS:
-: t
-* Org publish
+** Display buffers
+
+I use a customized =display-buffer-alist=. This variable tells emacs how
+to display buffers based on their name. My layout is configured to
+work with three areas:
+
+- *Main area* Used to display the documents/files I am editing. I can split normally
+- *Bottom window* Used for shells, compilation outputs, ...
+- *Side window* Used mainly for reference windows such as help/man pages (but also for other purposes)
+
 
 #+BEGIN_SRC emacs-lisp
-(setq org-publish-project-alist
-      '(("orgfiles"
-	 :base-directory "~/org/nb"
-	 :base-extension "org"
-	 :publishing-directory "~/org-html/nb/"
-	 :publishing-function org-html-publish-to-html
-	 :exclude "PrivatePage.org" ;; regexp
-	 :headline-levels 3
-	 :section-numbers nil
-	 :with-toc nil
-	 :html-head "<link rel=\"stylesheet\"
-		  href=\"../other/style.css\" type=\"text/css\"/>"
-	 :html-preamble t)
+(setq display-buffer-alist `((,(rx "*" (or "help"
+               "man"
+               "WoMan"
+               "bufler"
+               "gud"))
 
-	("images"
-	 :base-directory "~/org/img/"
-	 :base-extension "jpg\\|gif\\|png"
-	 :publishing-directory "~/org-html/img/"
-	 :publishing-function org-publish-attachment)
+          ;; display help buffers at the right
+          (display-buffer-reuse-window display-buffer-in-side-window)
+          (side . right)
+          (window-width . 0.4))
 
-	("other"
-	 :base-directory "~/other/"
-	 :base-extension "css\\|el"
-	 :publishing-directory "~/org-html/other/"
-	 :publishing-function org-publish-attachment)
+         (,(rx "*" (or "vterm"
+                       "shell"
+                       "compilation"
+                       "maxima"
+                       "input"
+                       "Python"
+                       "KotlinREPL"
+                       "scala"
+                       "ielm"
+                       "TeX"
+                       "BackTrace"
+                       "Warnings"
+                       "Messages"
+                       "Flycheck errors"
+                      ))
 
-	 ("wiki" :components ("orgfiles" "images" "other"))))
+          ;; display shell, compilation and error buffers at the bottom
+          (display-buffer-reuse-window display-buffer-in-side-window)
+          (side . bottom)
+          (window-width . 10))))
 #+END_SRC
 
 #+RESULTS:
-| orgfiles | :base-directory | ~/org/nb | :base-extension | org | :publishing-directory | ~/org-html/nb/ | :publishing-function | org-html-publish-to-html | :exclude | PrivatePage.org | :headline-levels | 3 | :section-numbers | nil | :with-toc | nil | :html-head | <link rel="stylesheet" |
+| \*\(?:WoMan\     | bufler\          | gud\        | help\     | man\)   | (display-buffer-reuse-window display-buffer-in-side-window) | (side . right) | (window-width . 0.4) |           |         |         |            |         |         |                                                             |                 |                     |
+| \*\(?:BackTrace\ | Flycheck errors\ | KotlinREPL\ | Messages\ | Python\ | TeX\                                                        | Warnings\      | compilation\         | i\(?:elm\ | nput\)\ | maxima\ | s\(?:cala\ | hell\)\ | vterm\) | (display-buffer-reuse-window display-buffer-in-side-window) | (side . bottom) | (window-width . 10) |
+
+.
