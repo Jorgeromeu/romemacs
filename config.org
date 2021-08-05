@@ -287,6 +287,14 @@ Dont use tabs
               indent-tabs-mode nil)
 #+END_SRC
 
+** Auto reload
+
+Auto reload a file when it changes on disk
+
+#+BEGIN_SRC emacs-lisp
+(global-auto-revert-mode t)
+#+END_SRC
+
 * Aesthetics
 
 Doom-Nord theme is my theme of choice.
