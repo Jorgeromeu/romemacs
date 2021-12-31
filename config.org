@@ -65,41 +65,6 @@ I use emacs on the terminal (mosty) so i need mouse support
 (xterm-mouse-mode 1)
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-; from:
-; https://gist.github.com/szobov/70890efabf895a8ce7f77c4cee7ec9b6
-(defun rom/copy-to-clipboard ()
-  "Copies selection to x-clipboard."
-  (interactive)
-  (if (display-graphic-p)
-      (progn
-        (message "Copied region to x-clipboard!")
-        (call-interactively 'clipboard-kill-ring-save)
-        )
-    (if (region-active-p)
-        (progn
-          (shell-command-on-region (region-beginning) (region-end) "xclip -selection clipboard")
-          (message "Copied region to clipboard!")
-          (deactivate-mark))
-      (message "No region active; can't yank to clipboard!")))
-  )
-
-(defun rom/paste-from-clipboard ()
-  "Pastes from x-clipboard."
-  (interactive)
-  (if (display-graphic-p)
-      (progn
-        (clipboard-yank)
-        (message "graphics active")
-        )
-    (insert (shell-command-to-string "xsel --clipboard --output"))
-    )
-  )
-#+END_SRC
-
-#+RESULTS:
-: rom/paste-from-clipboard
-
 ** Fonts
 
 I am using [[https:github.com/gaplo916/Ligatured-Hack][ligatured Hack]] as my font. This is a fork of Hack but with
@@ -108,12 +73,11 @@ know of that looks good in code and also for text.
 
 #+BEGIN_SRC emacs-lisp
 (defun rom/fonts-setup ()
-  (set-frame-font "Hack FC Ligatured-10"))
+  (set-frame-font "Hack FC Ligatured-11"))
 
 (rom/fonts-setup)
 (add-hook 'server-after-make-frame-hook 'rom/fonts-setup)
 #+END_SRC
-
 #+RESULTS:
 | doom-modeline-refresh-font-width-cache | rom/fonts-setup |
 
@@ -140,9 +104,12 @@ some of the ligatures such as www distracting and unnecesary.
   (global-ligature-mode t))
 #+END_SRC
 
+#+RESULTS:
+: t
+
 ** Quality of life settings
 
-Disable alarms and beeping entirely
+Disable alarms and beeping
 
 #+BEGIN_SRC emacs-lisp
 (setq ring-bell-function 'ignore)
@@ -265,13 +232,15 @@ Scrolling in emacs is kind of a mess. Nonetheles I think i have found the settin
       mouse-wheel-tilt-scroll nil)
 #+END_SRC
 
-** Parens
+** Parentheses and delimiters
 
 I use the =rainbow-delimiters= package to color matching parens. Also the default =electric-pair-mode= to automatically insert matching pairs and =show-paren-mode= to highlight the matching paren when the cursor is over one.
 
 #+BEGIN_SRC emacs-lisp
 (use-package rainbow-delimiters
-  :hook (prog-mode . rainbow-delimiters-mode))
+  :hook
+  (prog-mode . rainbow-delimiters-mode)
+  (LaTeX-mode . rainbow-delimiters-mode))
 
 (electric-pair-mode 1)
 (show-paren-mode 1)
@@ -284,9 +253,12 @@ I use the =rainbow-delimiters= package to color matching parens. Also the defaul
 
 #+END_SRC
 
+#+RESULTS:
+: t
+
 ** Line numbers
 
-Display line numbers in programming modes only.
+Automatically display line numbers in programming modes:
 
 #+BEGIN_SRC emacs-lisp
 (add-hook 'prog-mode-hook (lambda () (display-line-numbers-mode 1)))
@@ -294,35 +266,15 @@ Display line numbers in programming modes only.
 
 ** Prettify Symbols Mode
 
-=prettify-symbols-mode= replaces all instances of certain strings with a specific character according to the association list =prettify-symbols-alist=.
-
-The global prettify symbols mode enables the mode in all buffers and re-loads the alist for each major mode (this way each mode can implement a list of symbols to replace).
+=prettify-symbols-mode= replaces all instances of certain strings with a specific character according to the alist: =prettify-symbols-alist= for the current major mode. The global prettify symbols mode enables the mode in all buffers and re-loads the alist for each major mode (this way each mode can implement a list of symbols to replace).
 
 #+BEGIN_SRC emacs-lisp
 (global-prettify-symbols-mode 1)
 #+END_SRC
 
-** C-l to clear shells
-
-bind =C-l= to clear the screen in all shell-like modes
-
-#+BEGIN_SRC emacs-lisp
-(add-hook 'shell-mode-hook
-          (lambda () (define-key shell-mode-map (kbd "C-l") 'comint-clear-buffer)))
-
-(add-hook 'gud-mode-hook
-          (lambda () (define-key gud-mode-map (kbd "C-l") 'comint-clear-buffer)))
-
-(add-hook 'term-mode-hook
-          (lambda () (define-key term-mode-map (kbd "C-l") 'comint-clear-buffer)))
-
-(add-hook 'comint-mode-hook
-          (lambda () (define-key comint-mode-map (kbd "C-l") 'comint-clear-buffer)))
-#+END_SRC
-
 ** Indentation
 
-Dont use tabs
+Dont use tabs.
 
 #+BEGIN_SRC emacs-lisp
 (setq-default tab-width 4
@@ -348,6 +300,9 @@ Doom-Nord theme is my theme of choice.
   (load-theme 'doom-nord t)
   (doom-themes-org-config))
 #+END_SRC
+
+#+RESULTS:
+: t
 
 I use Doom modeline since it is fast enough and much nicer looking than the default.
 
@@ -401,15 +356,13 @@ Evil mode provides vim emulation. This is a must-have feature for me.
   (evil-global-set-key 'motion "j" 'evil-next-visual-line)
   (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
 
-  (evil-set-initial-state 'vterm-mode 'emacs)
-  (evil-set-initial-state 'messages-buffer-mode 'normal)
-  (evil-set-initial-state 'dashboard-mode 'normal))
+  (evil-set-initial-state 'messages-buffer-mode 'normal))
 #+END_SRC
 
 #+RESULTS:
 : t
 
-The =evil-collection= package overrides some default bindings to make them vim-like.
+The k package overrides some default bindings to make them vim-like.
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-collection
@@ -427,7 +380,7 @@ The =evil-collection= package overrides some default bindings to make them vim-l
   (global-evil-surround-mode 1))
 #+END_SRC
 
-Likewise =evil-commentary= adds evil-commentary bindings
+Likewise =evil-commentary= adds evil-commentary bindings, specifically =gc l= to comment a line
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-commentary
@@ -435,7 +388,7 @@ Likewise =evil-commentary= adds evil-commentary bindings
   (evil-commentary-mode 1))
 #+END_SRC
 
-I use the =key-chord= package to map 'jj' in insert to =Esc=
+I use the =key-chord= package to map 'jj' in evil insert state to =Esc=
 
 #+BEGIN_SRC emacs-lisp
 (use-package key-chord
@@ -468,13 +421,13 @@ Some general purpose leader key bindings
 
 Also some standard Ctrl bindings are added:
 
-  #+BEGIN_SRC emacs-lisp
-  (global-set-key (kbd "C-=") 'text-scale-increase)
-  (global-set-key (kbd "C--") 'text-scale-decrease)
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-=") 'text-scale-increase)
+(global-set-key (kbd "C--") 'text-scale-decrease)
 
-  (evil-define-key 'visual 'global (kbd "C-c") 'rom/copy-to-clipboard)
-  (evil-define-key 'insert 'global (kbd "C-v") 'rom/paste-from-clipboard)
-  #+END_SRC
+(evil-define-key 'visual 'global (kbd "C-c") 'rom/copy-to-clipboard)
+(evil-define-key 'insert 'global (kbd "C-v") 'rom/paste-from-clipboard)
+#+END_SRC
 
   #+RESULTS:
 
@@ -540,16 +493,12 @@ which can be used by LSP and other backends.
   ;; enable company in programming modes
   (add-hook 'prog-mode-hook 'company-mode)
   :config
+
+  ;; no delay, and start suggesting after just one character
   (setq company-idle-delay 0)
   (setq company-minimum-prefix-length 1)
 
-  ;; use standard bindings
-  (company-tng-configure-default)
-  (define-key company-mode-map (kbd "C-SPC") 'company-complete)
-  (define-key company-mode-map (kbd "C-RET") 'company-complete-selection)
-
-  (define-key company-search-map (kbd "C-j") 'company-select-next)
-  (define-key company-search-map (kbd "C-k") 'company-select-previous))
+  )
 #+END_SRC
 
 #+RESULTS:
@@ -561,8 +510,10 @@ Eglot is a LSP client for emacs. In my opinion it is much simpler than LSP mode
 
 #+BEGIN_SRC emacs-lisp
 (use-package eglot
+  :defer t
   :ensure t)
 #+END_SRC
+
 
 ** Projectile
 
@@ -582,6 +533,8 @@ Projectile provides a lot of commands for interacting with projects, such as:
   #+END_SRC
 
 ** Neotree
+
+Provides a nice tree-directory viewer
 
 #+BEGIN_SRC emacs-lisp
 (use-package neotree
@@ -607,16 +560,21 @@ Projectile provides a lot of commands for interacting with projects, such as:
   #+BEGIN_SRC emacs-lisp
   (use-package projectile
     :ensure t
+    :defer t
     :init
     (projectile-mode 1)
     :bind (:map projectile-mode-map
                 ("C-c p" . projectile-command-map)))
   #+END_SRC
 
+  #+RESULTS:
+  : projectile-command-map
+
 ** Neotree
 
 #+BEGIN_SRC emacs-lisp
 (use-package neotree
+  :defer t
   :config
   (setq neo-window-fixed-size nil)
   (setq neo-theme (if (display-graphic-p)
@@ -627,7 +585,8 @@ Projectile provides a lot of commands for interacting with projects, such as:
 ** Magit
 
 #+BEGIN_SRC emacs-lisp
-(use-package magit)
+(use-package magit
+  :defer t)
 #+END_SRC
 
 ** Dired
@@ -663,10 +622,13 @@ Hide dotfiles and details by default, toggle them with '.'
 Use icons in dired.
 
 #+BEGIN_SRC emacs-lisp
+; TODO Automatically enable in graphical mode
 (use-package all-the-icons-dired
-  :after all-the-icons
-  :hook (dired-mode . all-the-icons-dired-mode))
+  :after all-the-icons)
 #+END_SRC
+
+#+RESULTS:
+: t
 
 Open files with specific extensions with specific programs. For
 example I want all pngs to open with the gnome image viewer.
@@ -689,22 +651,19 @@ Auto reload dired when a file/directory is added/deleted externally
 (add-hook 'dired-mode-hook 'auto-revert-mode)
 #+END_SRC
 
+** xclip
+
+I use linux and emacs in the terminal. This makes emacs copy-pastes be handled through xclip so I can use them outside of emacs.
+
+#+BEGIN_SRC emacs-lisp
+(use-package xclip
+  :config
+  (xclip-mode 1))
+#+END_SRC
+
 * Quality of life packages
 
 These are the packages I can live with out but are still nice to have
-
-** Beacon
-
-Beacon mode simply "illuminates" the point in certain situations to make it simpler to find.
-
-#+BEGIN_SRC emacs-lisp
-(use-package beacon
-  :config
-  (setq beacon-blink-when-window-scrolls nil)
-  (setq beacon-blink-when-buffer-changes t)
-  (setq beacon-blink-when-window-changes t)
-  (beacon-mode 1))
-#+END_SRC
 
 ** Undo-fu
 
@@ -720,6 +679,7 @@ Provides a standard undo system. I used to use undo-tree but this is faster and 
 
 #+BEGIN_SRC emacs-lisp
 (use-package origami
+  :defer t
   :config
   (global-origami-mode 1)
   (push '(scala-mode . origami-c-style-parser) origami-parser-alist)
@@ -730,7 +690,7 @@ Provides a standard undo system. I used to use undo-tree but this is faster and 
 
 ** Treesitter
 
-Treesitter gives enhanced code highlighting based on the syntax tree rather than regex matches.
+Treesitter gives enhanced code highlighting based on the syntax tree rather than naive regex-matches
 
 #+BEGIN_SRC emacs-lisp
 (use-package tree-sitter)
@@ -742,7 +702,7 @@ Treesitter gives enhanced code highlighting based on the syntax tree rather than
 
 ** Highlight TODO
 
-Highlighs TODO, FIXME, KLUDGE and other similar strings in code comments
+Very simple, highlights TODO, FIXME, KLUDGE and other similar strings in code comments
 
 #+BEGIN_SRC emacs-lisp
 (use-package hl-todo
@@ -754,7 +714,7 @@ Highlighs TODO, FIXME, KLUDGE and other similar strings in code comments
 
 ** Helpful
 
-Helpful replaces the standard help commands with more helpful alternatives.
+Helpful replaces the standard help commands with more... helpful alternatives.
 
 #+BEGIN_SRC emacs-lisp
 (use-package helpful
@@ -807,19 +767,15 @@ Recentf is a built in package that keeps track of recently edited files
 Org cliplink makes it easy to automatically create a link to the sourece copied in the clipboard
 
 #+BEGIN_SRC emacs-lisp
-(use-package org-cliplink)
+(use-package org-cliplink
+  :defer t)
 #+END_SRC
 
 ** All the icons
 
 #+BEGIN_SRC emacs-lisp
-(use-package all-the-icons)
-#+END_SRC
-
-** Vterm
-
-#+BEGIN_SRC emacs-lisp
-(add-hook 'vterm-mode-hook (lambda () ()))
+(use-package all-the-icons
+  :defer t)
 #+END_SRC
 
 * Major modes
@@ -845,6 +801,7 @@ Org cliplink makes it easy to automatically create a link to the sourece copied 
 
 #+BEGIN_SRC emacs-lisp
 (use-package org
+  :defer t
   :config
   (setq org-ellipsis " ▾"
         org-hide-emphasis-markers t
@@ -913,26 +870,24 @@ The =rom/org-mode-setup= function configures some org mode settings and runs whe
 ** YAML mode
 
 #+BEGIN_SRC emacs-lisp
-(use-package yaml-mode)
+(use-package yaml-mode
+  :defer t)
 #+END_SRC
 
 ** LaTeX
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sit amet auctor dolor. Aliquam malesuada ullamcorper neque, luctus egestas nisl fringilla at. Curabitur eget nisl vel diam congue porttitor a ut lorem. Nulla ut ex molestie, condimentum ex eu, pretium orci. Maecenas quis diam sed mi auctor imperdiet. Morbi facilisis aliquet maximus. Nunc nec massa pellentesque mauris ornare lacinia id sit amet ante.
-
-Center =LaTeX= buffers and enable rainbow delimiters.
+Not a prog mode so I enable rainbow delimiters mode
 
 #+BEGIN_SRC emacs-lisp
 (add-hook 'LaTeX-mode-hook 'rainbow-delimiters-mode)
 #+END_SRC
 
-
 ** Rust
 
 #+BEGIN_SRC emacs-lisp
-(use-package rust-mode)
+(use-package rust-mode
+  :defer t)
 #+END_SRC
-
 #+RESULTS:
 
 * Aliases
